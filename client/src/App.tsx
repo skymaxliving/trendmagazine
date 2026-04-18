@@ -7,6 +7,12 @@ import { ThemeProvider } from "./contexts/ThemeContext";
 import Home from "./pages/Home";
 import Category from "./pages/Category";
 import Article from "./pages/Article";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
+import Cookies from "./pages/Cookies";
+import About from "./pages/About";
+import Ethics from "./pages/Ethics";
+import CookieConsent from "./components/CookieConsent";
 
 function Router() {
   return (
@@ -14,6 +20,11 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/kategorie/:slug" component={Category} />
       <Route path="/clanek/:slug" component={Article} />
+      <Route path="/ochrana-soukromi" component={Privacy} />
+      <Route path="/podminky-uziti" component={Terms} />
+      <Route path="/cookies" component={Cookies} />
+      <Route path="/o-nas" component={About} />
+      <Route path="/eticky-kodex" component={Ethics} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
@@ -27,6 +38,7 @@ function App() {
         <TooltipProvider>
           <Toaster />
           <Router />
+          <CookieConsent />
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>

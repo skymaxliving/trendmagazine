@@ -43,10 +43,35 @@ export default function Footer() {
             </ul>
           </div>
 
-          {/* More categories */}
+          {/* Informace */}
           <div>
-            <h4 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">Další</h4>
+            <h4 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">Informace</h4>
             <ul className="space-y-2">
+              <li>
+                <Link href="/o-nas" className="text-sm text-white/60 hover:text-white transition-colors no-underline">
+                  O portálu / Impressum
+                </Link>
+              </li>
+              <li>
+                <Link href="/eticky-kodex" className="text-sm text-white/60 hover:text-white transition-colors no-underline">
+                  Etický kodex redakce
+                </Link>
+              </li>
+              <li>
+                <Link href="/ochrana-soukromi" className="text-sm text-white/60 hover:text-white transition-colors no-underline">
+                  Ochrana osobních údajů
+                </Link>
+              </li>
+              <li>
+                <Link href="/podminky-uziti" className="text-sm text-white/60 hover:text-white transition-colors no-underline">
+                  Podmínky užití
+                </Link>
+              </li>
+              <li>
+                <Link href="/cookies" className="text-sm text-white/60 hover:text-white transition-colors no-underline">
+                  Zásady cookies
+                </Link>
+              </li>
               {categories.slice(6).map((cat) => (
                 <li key={cat.id}>
                   <Link
@@ -57,16 +82,6 @@ export default function Footer() {
                   </Link>
                 </li>
               ))}
-              <li>
-                <Link href="/o-nas" className="text-sm text-white/60 hover:text-white transition-colors no-underline">
-                  O nás
-                </Link>
-              </li>
-              <li>
-                <Link href="/kontakt" className="text-sm text-white/60 hover:text-white transition-colors no-underline">
-                  Kontakt
-                </Link>
-              </li>
             </ul>
           </div>
 
@@ -101,8 +116,14 @@ export default function Footer() {
             <Link href="/ochrana-soukromi" className="hover:text-white/60 transition-colors no-underline">
               Ochrana soukromí
             </Link>
-            <Link href="/podminky" className="hover:text-white/60 transition-colors no-underline">
+            <Link href="/podminky-uziti" className="hover:text-white/60 transition-colors no-underline">
               Podmínky užití
+            </Link>
+            <Link href="/eticky-kodex" className="hover:text-white/60 transition-colors no-underline">
+              Etický kodex
+            </Link>
+            <Link href="/o-nas" className="hover:text-white/60 transition-colors no-underline">
+              Impressum
             </Link>
             <Link href="/cookies" className="hover:text-white/60 transition-colors no-underline">
               Cookies
