@@ -1,10 +1,10 @@
 /*
  * TrendMagazine.cz – Sidebar Component
- * Design: "Warm Authority" – trending articles, categories, ad slots
+ * Design: "Steel & Ink" – trending articles, categories, social links, ad slots
  */
 import { Link } from "wouter";
 import { articles, categories, formatDate } from "@/lib/data";
-import { TrendingUp } from "lucide-react";
+import { TrendingUp, ExternalLink } from "lucide-react";
 import AdSlot from "./AdSlot";
 
 export default function Sidebar() {
@@ -70,22 +70,33 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Newsletter CTA */}
+      {/* Social / Follow us */}
       <div className="bg-primary rounded-sm p-5 text-primary-foreground">
         <h3 className="text-sm font-semibold uppercase tracking-wider mb-2">
-          Buďte v obraze
+          Sledujte nás
         </h3>
-        <p className="text-sm text-primary-foreground/80 mb-3 leading-relaxed">
-          Odebírejte náš newsletter a dostávejte nejlepší články přímo do emailu.
+        <p className="text-sm text-primary-foreground/70 mb-4 leading-relaxed">
+          Buďte v obraze. Sledujte TrendMagazine na sociálních sítích.
         </p>
-        <input
-          type="email"
-          placeholder="Váš email"
-          className="w-full px-3 py-2 bg-white/15 border border-white/20 rounded-sm text-sm text-white placeholder:text-white/50 focus:outline-none focus:ring-1 focus:ring-white/40 mb-2"
-        />
-        <button className="w-full px-4 py-2 bg-white/20 hover:bg-white/30 text-white text-sm font-medium rounded-sm transition-colors">
-          Přihlásit se
-        </button>
+        <div className="grid grid-cols-2 gap-2">
+          {[
+            { name: "Facebook", href: "#" },
+            { name: "Instagram", href: "#" },
+            { name: "X (Twitter)", href: "#" },
+            { name: "LinkedIn", href: "#" },
+          ].map((social) => (
+            <a
+              key={social.name}
+              href={social.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-white/12 hover:bg-white/20 text-white text-sm font-medium rounded-sm transition-colors no-underline"
+            >
+              {social.name}
+              <ExternalLink className="w-3 h-3 opacity-50" />
+            </a>
+          ))}
+        </div>
       </div>
     </aside>
   );

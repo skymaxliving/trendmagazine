@@ -45,40 +45,45 @@
 }
 
 :root {
-  --radius: 0.375rem;
-  /* Warm Authority palette */
-  --background: oklch(0.975 0.005 90);
-  --foreground: oklch(0.20 0.02 250);
-  --card: oklch(0.99 0.003 90);
-  --card-foreground: oklch(0.20 0.02 250);
-  --popover: oklch(0.99 0.003 90);
-  --popover-foreground: oklch(0.20 0.02 250);
-  --primary: oklch(0.35 0.06 160);
-  --primary-foreground: oklch(0.98 0.005 90);
-  --secondary: oklch(0.95 0.008 90);
-  --secondary-foreground: oklch(0.30 0.02 250);
-  --muted: oklch(0.94 0.006 90);
-  --muted-foreground: oklch(0.50 0.015 250);
-  --accent: oklch(0.60 0.12 75);
-  --accent-foreground: oklch(0.15 0.02 250);
+  --radius: 0.25rem;
+  /*
+   * "Steel & Ink" palette
+   * Inspired by Reuters, Financial Times – ocelově šedá + teplé béžové pozadí
+   * Primary: dark steel (#1E293B) – serióznost, analytický přístup
+   * Accent: měděná/bronzová – premium, warm touch
+   */
+  --background: oklch(0.97 0.006 80);
+  --foreground: oklch(0.18 0.02 255);
+  --card: oklch(0.99 0.003 80);
+  --card-foreground: oklch(0.18 0.02 255);
+  --popover: oklch(0.99 0.003 80);
+  --popover-foreground: oklch(0.18 0.02 255);
+  --primary: oklch(0.30 0.04 255);
+  --primary-foreground: oklch(0.98 0.003 80);
+  --secondary: oklch(0.94 0.008 80);
+  --secondary-foreground: oklch(0.28 0.02 255);
+  --muted: oklch(0.93 0.005 80);
+  --muted-foreground: oklch(0.50 0.012 255);
+  --accent: oklch(0.55 0.10 55);
+  --accent-foreground: oklch(0.15 0.02 255);
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.985 0 0);
-  --border: oklch(0.88 0.01 90);
-  --input: oklch(0.88 0.01 90);
-  --ring: oklch(0.35 0.06 160);
-  --chart-1: oklch(0.35 0.06 160);
-  --chart-2: oklch(0.60 0.12 75);
-  --chart-3: oklch(0.55 0.08 160);
-  --chart-4: oklch(0.45 0.04 250);
-  --chart-5: oklch(0.70 0.10 75);
-  --sidebar: oklch(0.97 0.005 90);
-  --sidebar-foreground: oklch(0.20 0.02 250);
-  --sidebar-primary: oklch(0.35 0.06 160);
-  --sidebar-primary-foreground: oklch(0.98 0.005 90);
-  --sidebar-accent: oklch(0.94 0.006 90);
-  --sidebar-accent-foreground: oklch(0.20 0.02 250);
-  --sidebar-border: oklch(0.88 0.01 90);
-  --sidebar-ring: oklch(0.35 0.06 160);
+  --border: oklch(0.87 0.008 80);
+  --input: oklch(0.87 0.008 80);
+  --ring: oklch(0.55 0.10 55);
+  --chart-1: oklch(0.30 0.04 255);
+  --chart-2: oklch(0.55 0.10 55);
+  --chart-3: oklch(0.45 0.06 255);
+  --chart-4: oklch(0.65 0.08 55);
+  --chart-5: oklch(0.38 0.03 255);
+  --sidebar: oklch(0.96 0.005 80);
+  --sidebar-foreground: oklch(0.18 0.02 255);
+  --sidebar-primary: oklch(0.30 0.04 255);
+  --sidebar-primary-foreground: oklch(0.98 0.003 80);
+  --sidebar-accent: oklch(0.93 0.005 80);
+  --sidebar-accent-foreground: oklch(0.18 0.02 255);
+  --sidebar-border: oklch(0.87 0.008 80);
+  --sidebar-ring: oklch(0.55 0.10 55);
 }
 
 @layer base {
@@ -149,17 +154,17 @@ body::before {
   height: 100%;
   pointer-events: none;
   z-index: 9999;
-  opacity: 0.015;
+  opacity: 0.012;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
 }
 
-/* Reading progress bar */
+/* Reading progress bar – steel/copper accent */
 .reading-progress {
   position: fixed;
   top: 0;
   left: 0;
   height: 3px;
-  background: oklch(0.35 0.06 160);
+  background: linear-gradient(90deg, oklch(0.30 0.04 255), oklch(0.55 0.10 55));
   z-index: 100;
   transition: width 0.1s ease;
 }
@@ -176,7 +181,7 @@ body::before {
   top: 0;
   bottom: 0;
   width: 3px;
-  background: oklch(0.35 0.06 160);
+  background: oklch(0.30 0.04 255);
 }
 
 /* Smooth image hover */
@@ -187,17 +192,17 @@ body::before {
   transform: scale(1.03);
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar – steel tones */
 ::-webkit-scrollbar {
   width: 8px;
 }
 ::-webkit-scrollbar-track {
-  background: oklch(0.94 0.006 90);
+  background: oklch(0.93 0.005 80);
 }
 ::-webkit-scrollbar-thumb {
-  background: oklch(0.70 0.02 90);
+  background: oklch(0.65 0.015 255);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: oklch(0.55 0.02 90);
+  background: oklch(0.50 0.02 255);
 }

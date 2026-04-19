@@ -13,6 +13,7 @@ import Cookies from "./pages/Cookies";
 import About from "./pages/About";
 import Ethics from "./pages/Ethics";
 import CookieConsent from "./components/CookieConsent";
+import ScrollToTop from "./components/ScrollToTop";
 
 function Router() {
   return (
@@ -37,6 +38,7 @@ function App() {
       <ThemeProvider defaultTheme="light">
         <TooltipProvider>
           <Toaster />
+          <ScrollToTop />
           <Router />
           <CookieConsent />
         </TooltipProvider>

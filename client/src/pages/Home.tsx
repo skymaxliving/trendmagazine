@@ -1,37 +1,32 @@
 /*
  * TrendMagazine.cz – Homepage
- * Design: "Warm Authority" – magazine spread layout
- * Hero article + featured grid + category sections + sidebar
+ * Hero carousel + featured grid + category sections + sidebar
  */
 import { motion } from "framer-motion";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ArticleCard from "@/components/ArticleCard";
+import HeroCarousel from "@/components/HeroCarousel";
 import Sidebar from "@/components/Sidebar";
 import AdSlot from "@/components/AdSlot";
 import { articles, categories, getArticlesByCategory } from "@/lib/data";
 
-const fadeIn = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.5 },
-};
-
 export default function Home() {
-  const heroArticle = articles[0];
-  const featuredArticles = articles.slice(1, 4);
-  const latestArticles = articles.slice(4);
+  // Top 5 articles for carousel
+  const heroArticles = articles.slice(0, 5);
+  // Next 3 for featured grid
+  const featuredArticles = articles.slice(5, 8);
+  // Rest for latest
+  const latestArticles = articles.slice(8);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
 
       <main className="flex-1">
-        {/* Hero Section */}
+        {/* Hero Carousel */}
         <section className="container mt-6 mb-8">
-          <motion.div {...fadeIn}>
-            <ArticleCard article={heroArticle} variant="hero" />
-          </motion.div>
+          <HeroCarousel articles={heroArticles} />
         </section>
 
         {/* Ad slot - header */}
@@ -59,24 +54,26 @@ export default function Home() {
             {/* Main content */}
             <div className="lg:w-2/3">
               {/* Latest Articles */}
-              <div className="mb-10">
-                <div className="flex items-center gap-3 mb-6">
-                  <h2 className="text-2xl font-serif font-bold text-foreground">Nejnovější články</h2>
-                  <div className="flex-1 h-px bg-border" />
+              {latestArticles.length > 0 && (
+                <div className="mb-10">
+                  <div className="flex items-center gap-3 mb-6">
+                    <h2 className="text-2xl font-serif font-bold text-foreground">Nejnovější články</h2>
+                    <div className="flex-1 h-px bg-border" />
+                  </div>
+                  <div className="space-y-0">
+                    {latestArticles.map((article, index) => (
+                      <motion.div
+                        key={article.id}
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 * index, duration: 0.4 }}
+                      >
+                        <ArticleCard article={article} variant="featured" />
+                      </motion.div>
+                    ))}
+                  </div>
                 </div>
-                <div className="space-y-0">
-                  {latestArticles.map((article, index) => (
-                    <motion.div
-                      key={article.id}
-                      initial={{ opacity: 0, y: 15 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: 0.1 * index, duration: 0.4 }}
-                    >
-                      <ArticleCard article={article} variant="featured" />
-                    </motion.div>
-                  ))}
-                </div>
-              </div>
+              )}
 
               {/* In-article ad */}
               <AdSlot position="in-article" className="my-8" />

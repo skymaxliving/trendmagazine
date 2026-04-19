@@ -1,6 +1,6 @@
 /*
  * TrendMagazine.cz – Header Component
- * Design: "Warm Authority" – deep green primary, warm cream bg, serif headings
+ * Design: "Steel & Ink" – dark steel primary, warm béžové bg, serif headings
  * Features: Logo, navigation with categories, mobile menu, search
  */
 import { useState } from "react";

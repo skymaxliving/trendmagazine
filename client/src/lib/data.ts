@@ -25,14 +25,14 @@ export interface Category {
 }
 
 export const categories: Category[] = [
-  { id: "svet", name: "Svět", slug: "svet", description: "Aktuální zprávy ze světa", color: "#1B4332" },
-  { id: "business", name: "Business", slug: "business", description: "Podnikání, ekonomika a finance", color: "#B8860B" },
-  { id: "akcie", name: "Akciové trhy", slug: "akcie", description: "Investice, burzy a akciové trhy", color: "#2D5016" },
-  { id: "technologie", name: "AI & Technologie", slug: "technologie", description: "Umělá inteligence, inovace a tech novinky", color: "#0E7490" },
-  { id: "auta", name: "Auta & Mobilita", slug: "auta", description: "Automobilový průmysl a budoucnost dopravy", color: "#4A5568" },
-  { id: "stavebnictvi", name: "Stavebnictví", slug: "stavebnictvi", description: "Moderní stavebnictví a bydlení", color: "#92400E" },
-  { id: "zdravi", name: "Zdraví & Fitness", slug: "zdravi", description: "Zdravý životní styl, cvičení a výživa", color: "#059669" },
-  { id: "celebrity", name: "Celebrity & Influenceři", slug: "celebrity", description: "Ze světa celebrit a influencerů", color: "#7C3AED" },
+  { id: "svet", name: "Svět", slug: "svet", description: "Aktuální zprávy ze světa", color: "#1E293B" },
+  { id: "business", name: "Business", slug: "business", description: "Podnikání, ekonomika a finance", color: "#92400E" },
+  { id: "akcie", name: "Akciové trhy", slug: "akcie", description: "Investice, burzy a akciové trhy", color: "#334155" },
+  { id: "technologie", name: "AI & Technologie", slug: "technologie", description: "Umělá inteligence, inovace a tech novinky", color: "#0F766E" },
+  { id: "auta", name: "Auta & Mobilita", slug: "auta", description: "Automobilový průmysl a budoucnost dopravy", color: "#475569" },
+  { id: "stavebnictvi", name: "Stavebnictví", slug: "stavebnictvi", description: "Moderní stavebnictví a bydlení", color: "#78350F" },
+  { id: "zdravi", name: "Zdraví & Fitness", slug: "zdravi", description: "Zdravý životní styl, cvičení a výživa", color: "#166534" },
+  { id: "celebrity", name: "Celebrity & Influenceři", slug: "celebrity", description: "Ze světa celebrit a influencerů", color: "#7E22CE" },
 ];
 
 export const getCategoryBySlug = (slug: string): Category | undefined =>
