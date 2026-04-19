@@ -43,19 +43,19 @@ export default function About() {
                 <tbody>
                   <tr className="border-b border-border/50">
                     <td className="py-2.5 font-semibold text-foreground w-1/3">Název společnosti</td>
-                    <td className="py-2.5 text-foreground/80">[DOPLNIT – viz doporučení níže]</td>
+                    <td className="py-2.5 text-foreground/80">SkyForce s.r.o.</td>
                   </tr>
                   <tr className="border-b border-border/50">
                     <td className="py-2.5 font-semibold text-foreground">Sídlo</td>
-                    <td className="py-2.5 text-foreground/80">[DOPLNIT]</td>
+                    <td className="py-2.5 text-foreground/80">Sokolovská 1333/45, Poruba, 708 00 Ostrava</td>
                   </tr>
                   <tr className="border-b border-border/50">
                     <td className="py-2.5 font-semibold text-foreground">IČO</td>
-                    <td className="py-2.5 text-foreground/80">[DOPLNIT]</td>
+                    <td className="py-2.5 text-foreground/80">240 41 017</td>
                   </tr>
                   <tr className="border-b border-border/50">
                     <td className="py-2.5 font-semibold text-foreground">Zápis v rejstříku</td>
-                    <td className="py-2.5 text-foreground/80">[DOPLNIT – např. „Společnost je zapsána v obchodním rejstříku vedeném u Městského soudu v Praze, oddílu C, vložce XXXX"]</td>
+                    <td className="py-2.5 text-foreground/80">Společnost je zapsána v obchodním rejstříku vedeném u Krajského soudu v Ostravě, oddíl C, vložka 101811</td>
                   </tr>
                   <tr className="border-b border-border/50">
                     <td className="py-2.5 font-semibold text-foreground">E-mail</td>
@@ -63,7 +63,7 @@ export default function About() {
                   </tr>
                   <tr>
                     <td className="py-2.5 font-semibold text-foreground">Telefon</td>
-                    <td className="py-2.5 text-foreground/80">[DOPLNIT – volitelné]</td>
+                    <td className="py-2.5 text-foreground/80">—</td>
                   </tr>
                 </tbody>
               </table>
@@ -75,7 +75,7 @@ export default function About() {
                 <tbody>
                   <tr className="border-b border-border/50">
                     <td className="py-2.5 font-semibold text-foreground w-1/3">Šéfredaktor</td>
-                    <td className="py-2.5 text-foreground/80">[DOPLNIT]</td>
+                    <td className="py-2.5 text-foreground/80">Matěj Vantuch</td>
                   </tr>
                   <tr>
                     <td className="py-2.5 font-semibold text-foreground">Kontakt na redakci</td>
