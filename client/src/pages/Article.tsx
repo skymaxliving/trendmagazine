@@ -1,18 +1,186 @@
 /*
- * TrendMagazine.cz – Article Detail Page
- * Design: "Steel & Ink" – reading-focused layout with progress bar
- * SEO: Schema.org Article structured data, Open Graph
+ * TrendMagazine.cz – Article Detail Page v2.0
+ * Design: "Steel & Ink" – premium reading experience
+ * Features: Large typography, generous spacing, pull-quotes, stat boxes,
+ *           scroll animations, Booking.com affiliate, rich content
  */
 import { useParams } from "wouter";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Link } from "wouter";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Sidebar from "@/components/Sidebar";
 import AdSlot from "@/components/AdSlot";
-import { getArticleBySlug, formatDate, articles } from "@/lib/data";
-import { Clock, ArrowLeft, Share2, Facebook, Twitter } from "lucide-react";
-import { motion } from "framer-motion";
+import { getArticleBySlug, formatDate, articles, type Article as ArticleType } from "@/lib/data";
+import { Clock, ArrowLeft, Share2, Facebook, Twitter, Bookmark, TrendingUp, BarChart3, Globe, Zap } from "lucide-react";
+import { motion, useInView } from "framer-motion";
+
+/* ── Animated section wrapper ── */
+function AnimatedSection({ children, className = "", delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const isInView = useInView(ref, { once: true, margin: "-60px" });
+  return (
+    <motion.div
+      ref={ref}
+      initial={{ opacity: 0, y: 30 }}
+      animate={isInView ? { opacity: 1, y: 0 } : { opacity: 0, y: 30 }}
+      transition={{ duration: 0.6, delay, ease: "easeOut" }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/* ── Stat Box Component ── */
+function StatBox({ value, label, icon }: { value: string; label: string; icon: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-4 p-5 bg-card border border-border/50 rounded-sm">
+      <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full bg-primary/10 text-primary">
+        {icon}
+      </div>
+      <div>
+        <div className="text-2xl font-bold text-foreground font-serif">{value}</div>
+        <div className="text-sm text-muted-foreground">{label}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ── Pull Quote Component ── */
+function PullQuote({ text, author }: { text: string; author?: string }) {
+  return (
+    <aside className="my-12 mx-0 lg:-mx-8">
+      <div className="relative py-8 px-8 lg:px-12 border-l-4 border-primary bg-primary/[0.03]">
+        <svg className="absolute top-4 left-4 lg:left-8 w-8 h-8 text-primary/20" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983z" />
+        </svg>
+        <p className="text-xl lg:text-2xl font-serif italic text-foreground/90 leading-relaxed pl-8 lg:pl-6">
+          {text}
+        </p>
+        {author && (
+          <p className="mt-4 text-sm font-medium text-muted-foreground pl-8 lg:pl-6">— {author}</p>
+        )}
+      </div>
+    </aside>
+  );
+}
+
+/* ── Booking.com Affiliate Box ── */
+function BookingBox() {
+  return (
+    <div className="my-12 rounded-sm overflow-hidden">
+      <div className="bg-gradient-to-r from-[#003580] to-[#0057b8] p-8 lg:p-10">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+          <div className="flex-1">
+            <p className="text-xl font-bold text-white mb-2">Zarezervujte si ubytování</p>
+            <p className="text-white/80 text-base leading-relaxed">
+              Najděte nejlepší hotely a apartmány pro vaši cestu na Booking.com. Porovnejte ceny a čtěte recenze od skutečných hostů.
+            </p>
+          </div>
+          <a
+            href="https://www.booking.com"
+            target="_blank"
+            rel="noopener noreferrer sponsored"
+            className="inline-flex items-center gap-2 bg-[#febb02] hover:bg-[#ffcc33] text-[#003580] font-bold px-8 py-3.5 rounded-sm text-base transition-colors no-underline whitespace-nowrap"
+          >
+            Hledat ubytování →
+          </a>
+        </div>
+        <p className="text-white/40 text-xs mt-4">
+          Partnerský odkaz – jako člen affiliate programu můžeme získat provizi za rezervace.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/* ── Article content generator based on category ── */
+function getArticleContent(article: ArticleType) {
+  const cat = article.category.id;
+
+  // Category-specific stat boxes
+  const statBoxes: Record<string, { stats: { value: string; label: string; icon: React.ReactNode }[] }> = {
+    "svet": {
+      stats: [
+        { value: "195", label: "Zemí ve světě", icon: <Globe className="w-5 h-5" /> },
+        { value: "8,1 mld", label: "Světová populace", icon: <TrendingUp className="w-5 h-5" /> },
+        { value: "24/7", label: "Zpravodajské pokrytí", icon: <Zap className="w-5 h-5" /> },
+      ],
+    },
+    "business": {
+      stats: [
+        { value: "+2,4 %", label: "Růst HDP eurozóny", icon: <TrendingUp className="w-5 h-5" /> },
+        { value: "3,8 %", label: "Míra nezaměstnanosti ČR", icon: <BarChart3 className="w-5 h-5" /> },
+        { value: "25,3", label: "CZK/EUR kurz", icon: <Globe className="w-5 h-5" /> },
+      ],
+    },
+    "akcie": {
+      stats: [
+        { value: "+18,5 %", label: "S&P 500 YTD", icon: <TrendingUp className="w-5 h-5" /> },
+        { value: "5 890", label: "S&P 500 aktuální", icon: <BarChart3 className="w-5 h-5" /> },
+        { value: "$120k", label: "Bitcoin ATH", icon: <Zap className="w-5 h-5" /> },
+      ],
+    },
+    "technologie": {
+      stats: [
+        { value: "$1,8 bil", label: "Globální AI trh 2026", icon: <Zap className="w-5 h-5" /> },
+        { value: "+42 %", label: "Růst AI investic r/r", icon: <TrendingUp className="w-5 h-5" /> },
+        { value: "3,5 mld", label: "Uživatelů AI nástrojů", icon: <Globe className="w-5 h-5" /> },
+      ],
+    },
+    "auta": {
+      stats: [
+        { value: "18,7 mil", label: "Prodaných EV v 2025", icon: <TrendingUp className="w-5 h-5" /> },
+        { value: "23 %", label: "Podíl EV na trhu", icon: <BarChart3 className="w-5 h-5" /> },
+        { value: "680 km", label: "Průměrný dojezd EV", icon: <Zap className="w-5 h-5" /> },
+      ],
+    },
+    "stavebnictvi": {
+      stats: [
+        { value: "+12 %", label: "Růst modulárních staveb", icon: <TrendingUp className="w-5 h-5" /> },
+        { value: "40 %", label: "Úspora času výstavby", icon: <Zap className="w-5 h-5" /> },
+        { value: "30 %", label: "Méně stavebního odpadu", icon: <BarChart3 className="w-5 h-5" /> },
+      ],
+    },
+    "zdravi": {
+      stats: [
+        { value: "150 min", label: "Doporučený pohyb/týden", icon: <TrendingUp className="w-5 h-5" /> },
+        { value: "7–9 h", label: "Optimální délka spánku", icon: <Zap className="w-5 h-5" /> },
+        { value: "2,5 l", label: "Denní příjem tekutin", icon: <BarChart3 className="w-5 h-5" /> },
+      ],
+    },
+    "celebrity": {
+      stats: [
+        { value: "4,9 mld", label: "Uživatelů soc. sítí", icon: <Globe className="w-5 h-5" /> },
+        { value: "$21 mld", label: "Influencer marketing", icon: <TrendingUp className="w-5 h-5" /> },
+        { value: "500 mil", label: "Denních Stories", icon: <Zap className="w-5 h-5" /> },
+      ],
+    },
+    "cestovani": {
+      stats: [
+        { value: "1,5 mld", label: "Mezinár. turistů 2025", icon: <Globe className="w-5 h-5" /> },
+        { value: "+8 %", label: "Růst cestovního ruchu", icon: <TrendingUp className="w-5 h-5" /> },
+        { value: "€145", label: "Prům. cena noci v EU", icon: <BarChart3 className="w-5 h-5" /> },
+      ],
+    },
+  };
+
+  // Category-specific pull quotes
+  const pullQuotes: Record<string, { text: string; author: string }> = {
+    "svet": { text: "Svět se mění rychleji než kdykoli předtím. Klíčem k pochopení budoucnosti je sledovat trendy, které formují přítomnost.", author: "Redakce TrendMagazine" },
+    "business": { text: "Úspěšné podnikání v roce 2026 vyžaduje nejen odvahu, ale především schopnost adaptace na neustále se měnící podmínky globální ekonomiky.", author: "Ekonomický analytik" },
+    "akcie": { text: "Investování není o předpovídání budoucnosti, ale o přípravě na ni. Diverzifikace a dlouhodobý horizont zůstávají nejlepší strategií.", author: "Investiční stratég" },
+    "technologie": { text: "Umělá inteligence není hrozbou pro lidstvo — je to nástroj, který nám umožní řešit problémy, které jsme dosud považovali za neřešitelné.", author: "Tech analytik" },
+    "auta": { text: "Elektromobilita není jen trend — je to nevyhnutelná transformace celého automobilového průmyslu, která změní způsob, jakým se pohybujeme.", author: "Automobilový expert" },
+    "stavebnictvi": { text: "Budoucnost stavebnictví leží v modulárních a prefabrikovaných řešeních. Ocelové rámové konstrukce nabízejí rychlost, přesnost a udržitelnost.", author: "Ing. Karel Procházka" },
+    "zdravi": { text: "Zdraví není jen absence nemoci. Je to stav kompletní fyzické, mentální a sociální pohody, o který je třeba aktivně pečovat každý den.", author: "Dr. Jana Králová" },
+    "celebrity": { text: "Sociální sítě demokratizovaly slávu. Dnes může kdokoli s chytrým telefonem a zajímavým obsahem oslovit miliony lidí po celém světě.", author: "Mediální analytik" },
+    "cestovani": { text: "Cestování je jediná investice, která vás obohatí, aniž byste museli cokoli prodat. Každá cesta vám otevře novou perspektivu.", author: "Kateřina Veselá, redaktorka" },
+  };
+
+  return { stats: statBoxes[cat] || statBoxes["svet"], pullQuote: pullQuotes[cat] || pullQuotes["svet"] };
+}
 
 export default function Article() {
   const { slug } = useParams<{ slug: string }>();
@@ -58,52 +226,22 @@ export default function Article() {
     image: article.image,
     datePublished: article.date,
     dateModified: article.date,
-    author: {
-      "@type": "Person",
-      name: article.author,
-    },
+    author: { "@type": "Person", name: article.author },
     publisher: {
       "@type": "Organization",
       name: "TrendMagazine.cz",
-      logo: {
-        "@type": "ImageObject",
-        url: "https://trendmagazine.cz/logo.png",
-      },
+      logo: { "@type": "ImageObject", url: "https://trendmagazine.cz/logo.png" },
     },
-    mainEntityOfPage: {
-      "@type": "WebPage",
-      "@id": `https://trendmagazine.cz/clanek/${article.slug}`,
-    },
+    mainEntityOfPage: { "@type": "WebPage", "@id": `https://trendmagazine.cz/clanek/${article.slug}` },
   };
 
-  // Related articles (same category, excluding current)
+  // Related articles
   const related = articles
     .filter((a) => a.category.id === article.category.id && a.id !== article.id)
     .slice(0, 3);
 
-  // Travel category Booking.com affiliate box
-  const bookingAffiliate = article.category.id === "cestovani" ? `
-    <div style="background: linear-gradient(135deg, #003580 0%, #0057b8 100%); border-radius: 6px; padding: 24px; margin: 24px 0; color: white;">
-      <p style="font-size: 18px; font-weight: bold; margin-bottom: 8px; color: white;">Zarezervujte si ubytování</p>
-      <p style="font-size: 14px; opacity: 0.9; margin-bottom: 16px; color: white;">Najděte nejlepší hotely a apartmány pro vaši cestu na Booking.com</p>
-      <a href="https://www.booking.com" target="_blank" rel="noopener noreferrer sponsored" style="display: inline-block; background: #febb02; color: #003580; font-weight: bold; padding: 10px 24px; border-radius: 4px; text-decoration: none; font-size: 14px;">Hledat ubytování &rarr;</a>
-      <p style="font-size: 11px; opacity: 0.6; margin-top: 12px; color: white;">Partnerský odkaz – jako člen affiliate programu můžeme získat provizi za rezervace.</p>
-    </div>
-  ` : "";
-
-  // Sample article body content
-  const articleBody = `
-    <p>${article.excerpt}</p>
-    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
-    <h2>Hlavní zjištění</h2>
-    <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
-    ${bookingAffiliate}
-    <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.</p>
-    <h2>Co to znamená pro budoucnost</h2>
-    <p>Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet.</p>
-    <blockquote>„Toto je zásadní moment pro celý sektor. Očekáváme, že v příštích měsících uvidíme další významné změny." – expert z oboru</blockquote>
-    <p>At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident.</p>
-  `;
+  // Get category-specific content
+  const { stats, pullQuote } = getArticleContent(article);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -119,134 +257,255 @@ export default function Article() {
       <Header />
 
       <main className="flex-1">
-        {/* Article header */}
+        {/* ── HERO IMAGE (full-width, immersive) ── */}
         <motion.section
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.5 }}
-          className="container mt-6"
+          transition={{ duration: 0.8 }}
+          className="relative w-full aspect-[16/9] lg:aspect-[21/9] overflow-hidden"
         >
-          {/* Breadcrumb */}
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-            <Link href="/" className="hover:text-primary transition-colors no-underline flex items-center gap-1">
-              <ArrowLeft className="w-3.5 h-3.5" /> Hlavní stránka
-            </Link>
-            <span>/</span>
-            <Link
-              href={`/kategorie/${article.category.slug}`}
-              className="hover:text-primary transition-colors no-underline"
+          <img
+            src={article.image}
+            alt={article.title}
+            className="w-full h-full object-cover"
+            loading="eager"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+          {/* Breadcrumb on image */}
+          <div className="absolute top-6 left-0 right-0 container">
+            <div className="flex items-center gap-2 text-sm text-white/70">
+              <Link href="/" className="hover:text-white transition-colors no-underline flex items-center gap-1">
+                <ArrowLeft className="w-3.5 h-3.5" /> Hlavní stránka
+              </Link>
+              <span>/</span>
+              <Link
+                href={`/kategorie/${article.category.slug}`}
+                className="hover:text-white transition-colors no-underline"
+              >
+                {article.category.name}
+              </Link>
+            </div>
+          </div>
+          {/* Category + title overlay */}
+          <div className="absolute bottom-0 left-0 right-0 container pb-8 lg:pb-12">
+            <span
+              className="inline-block px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-white rounded-sm mb-5"
+              style={{ backgroundColor: article.category.color }}
             >
               {article.category.name}
-            </Link>
-          </div>
-
-          {/* Title */}
-          <span
-            className="inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white rounded-sm mb-4"
-            style={{ backgroundColor: article.category.color }}
-          >
-            {article.category.name}
-          </span>
-          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-serif font-bold text-foreground leading-tight mb-4">
-            {article.title}
-          </h1>
-          <p className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-3xl mb-5">
-            {article.excerpt}
-          </p>
-
-          {/* Meta */}
-          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-6 pb-6 border-b border-border">
-            <span className="font-medium text-foreground">{article.author}</span>
-            <span>{formatDate(article.date)}</span>
-            <span className="flex items-center gap-1">
-              <Clock className="w-3.5 h-3.5" /> {article.readTime} min čtení
             </span>
-            <div className="flex-1" />
-            <div className="flex items-center gap-2">
-              <button className="p-2 text-muted-foreground hover:text-primary transition-colors rounded-sm hover:bg-primary/5" title="Sdílet">
-                <Share2 className="w-4 h-4" />
-              </button>
-              <button className="p-2 text-muted-foreground hover:text-[#1877F2] transition-colors rounded-sm hover:bg-[#1877F2]/5" title="Facebook">
-                <Facebook className="w-4 h-4" />
-              </button>
-              <button className="p-2 text-muted-foreground hover:text-[#1DA1F2] transition-colors rounded-sm hover:bg-[#1DA1F2]/5" title="Twitter">
-                <Twitter className="w-4 h-4" />
-              </button>
-            </div>
+            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-serif font-bold text-white leading-[1.15] max-w-4xl drop-shadow-lg">
+              {article.title}
+            </h1>
           </div>
         </motion.section>
 
-        {/* Hero image */}
-        <section className="container mb-8">
-          <div className="overflow-hidden rounded-sm aspect-[16/9] lg:aspect-[21/9]">
-            <img
-              src={article.image}
-              alt={article.title}
-              className="w-full h-full object-cover"
-              loading="eager"
-            />
+        {/* ── ARTICLE META BAR ── */}
+        <section className="border-b border-border bg-card/50">
+          <div className="container py-5">
+            <div className="flex flex-wrap items-center gap-5 text-sm">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold font-serif text-lg">
+                  {article.author.charAt(0)}
+                </div>
+                <div>
+                  <span className="font-semibold text-foreground block">{article.author}</span>
+                  <span className="text-muted-foreground text-xs">{formatDate(article.date)}</span>
+                </div>
+              </div>
+              <div className="hidden sm:block w-px h-8 bg-border" />
+              <span className="flex items-center gap-1.5 text-muted-foreground">
+                <Clock className="w-4 h-4" /> {article.readTime} min čtení
+              </span>
+              <div className="flex-1" />
+              <div className="flex items-center gap-1">
+                <button className="p-2.5 text-muted-foreground hover:text-primary transition-colors rounded-sm hover:bg-primary/5" title="Uložit">
+                  <Bookmark className="w-4.5 h-4.5" />
+                </button>
+                <button className="p-2.5 text-muted-foreground hover:text-primary transition-colors rounded-sm hover:bg-primary/5" title="Sdílet">
+                  <Share2 className="w-4.5 h-4.5" />
+                </button>
+                <button className="p-2.5 text-muted-foreground hover:text-[#1877F2] transition-colors rounded-sm hover:bg-[#1877F2]/5" title="Facebook">
+                  <Facebook className="w-4.5 h-4.5" />
+                </button>
+                <button className="p-2.5 text-muted-foreground hover:text-[#1DA1F2] transition-colors rounded-sm hover:bg-[#1DA1F2]/5" title="Twitter">
+                  <Twitter className="w-4.5 h-4.5" />
+                </button>
+              </div>
+            </div>
           </div>
         </section>
 
-        {/* Article body + sidebar */}
-        <section className="container">
-          <div className="flex flex-col lg:flex-row gap-8">
+        {/* ── ARTICLE BODY + SIDEBAR ── */}
+        <section className="container mt-10 lg:mt-14">
+          <div className="flex flex-col lg:flex-row gap-10 lg:gap-14">
+            {/* Main content */}
             <div className="lg:w-2/3">
-              {/* Article content */}
-              <article
-                className="prose prose-lg max-w-none
-                  prose-headings:font-serif prose-headings:text-foreground prose-headings:font-bold
-                  prose-p:text-foreground/80 prose-p:leading-relaxed
-                  prose-a:text-primary prose-a:no-underline hover:prose-a:underline
-                  prose-blockquote:border-l-primary prose-blockquote:text-foreground/70 prose-blockquote:italic prose-blockquote:font-serif
-                  prose-strong:text-foreground
-                  mb-8"
-                dangerouslySetInnerHTML={{ __html: articleBody }}
-              />
+              {/* Lead paragraph */}
+              <AnimatedSection>
+                <p className="text-xl lg:text-2xl text-foreground/90 leading-[1.8] font-serif mb-10">
+                  {article.excerpt}
+                </p>
+              </AnimatedSection>
+
+              {/* Stat boxes */}
+              <AnimatedSection delay={0.1}>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-12">
+                  {stats.stats.map((stat, i) => (
+                    <StatBox key={i} value={stat.value} label={stat.label} icon={stat.icon} />
+                  ))}
+                </div>
+              </AnimatedSection>
+
+              {/* Body text section 1 */}
+              <AnimatedSection delay={0.15}>
+                <div className="article-body">
+                  <p>
+                    Situace na globálních trzích se v posledních měsících výrazně proměnila. Analytici z předních
+                    finančních institucí poukazují na několik klíčových faktorů, které formují současný vývoj a které
+                    budou mít zásadní dopad na ekonomiku v nadcházejících čtvrtletích. Mezi nejvýznamnější patří
+                    technologická transformace, geopolitické napětí a měnící se spotřebitelské chování.
+                  </p>
+                  <p>
+                    Podle nejnovějších dat se ukazuje, že tempo změn se zrychluje. Firmy, které dokáží rychle reagovat
+                    na nové trendy a přizpůsobit své strategie, získávají výraznou konkurenční výhodu. Naopak ty,
+                    které setrvávají u tradičních modelů, čelí rostoucímu tlaku ze strany inovativnějších konkurentů.
+                  </p>
+                </div>
+              </AnimatedSection>
+
+              {/* Pull Quote */}
+              <AnimatedSection delay={0.2}>
+                <PullQuote text={pullQuote.text} author={pullQuote.author} />
+              </AnimatedSection>
+
+              {/* Body text section 2 */}
+              <AnimatedSection delay={0.25}>
+                <div className="article-body">
+                  <h2>Hlavní zjištění a analýza</h2>
+                  <p>
+                    Detailní analýza dostupných dat odhaluje několik překvapivých trendů. Především je to rostoucí
+                    význam udržitelnosti a ESG kritérií při rozhodování investorů i spotřebitelů. Firmy, které
+                    integrují principy udržitelného rozvoje do svého podnikání, vykazují v průměru o 15 % vyšší
+                    návratnost investic ve srovnání s konkurencí.
+                  </p>
+                  <p>
+                    Dalším významným faktorem je digitalizace. Společnosti, které investovaly do digitální
+                    transformace v posledních třech letech, zaznamenaly průměrný nárůst produktivity o 23 %.
+                    Tento trend je patrný napříč všemi sektory — od výroby přes služby až po veřejnou správu.
+                  </p>
+                  <p>
+                    Zvláštní pozornost si zaslouží vývoj v oblasti umělé inteligence. Implementace AI řešení
+                    přináší nejen úspory nákladů, ale především nové obchodní příležitosti. Podle odhadů
+                    poradenské společnosti McKinsey může AI do roku 2030 přidat k globálnímu HDP až 13 bilionů dolarů.
+                  </p>
+                </div>
+              </AnimatedSection>
+
+              {/* Booking.com affiliate for travel articles */}
+              {article.category.id === "cestovani" && (
+                <AnimatedSection delay={0.3}>
+                  <BookingBox />
+                </AnimatedSection>
+              )}
+
+              {/* Body text section 3 */}
+              <AnimatedSection delay={0.3}>
+                <div className="article-body">
+                  <h2>Co to znamená pro budoucnost</h2>
+                  <p>
+                    Experti se shodují, že nadcházející období přinese další zásadní změny. Klíčové bude sledovat
+                    vývoj regulatorního prostředí, zejména v oblasti technologií a finančních trhů. Evropská unie
+                    připravuje řadu nových legislativních opatření, která mohou výrazně ovlivnit podnikatelské
+                    prostředí na celém kontinentu.
+                  </p>
+                  <p>
+                    Pro české firmy a investory je důležité sledovat nejen globální trendy, ale také specifika
+                    středoevropského regionu. Česká republika si udržuje stabilní ekonomický růst a relativně
+                    nízkou nezaměstnanost, což vytváří příznivé podmínky pro podnikání i investice.
+                  </p>
+                </div>
+              </AnimatedSection>
+
+              {/* Highlighted insight box */}
+              <AnimatedSection delay={0.35}>
+                <div className="my-12 p-8 bg-primary/[0.04] border border-primary/10 rounded-sm">
+                  <div className="flex items-start gap-4">
+                    <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-primary/10 text-primary mt-1">
+                      <Zap className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-serif font-bold text-foreground mb-2">Klíčový závěr</h3>
+                      <p className="text-foreground/80 leading-relaxed text-base">
+                        Přestože se ekonomické prostředí stává stále komplexnějším, základní principy úspěchu
+                        zůstávají stejné: diverzifikace, dlouhodobé myšlení a schopnost adaptace. Ti, kteří
+                        dokáží tyto principy aplikovat v praxi, budou nejlépe připraveni na výzvy i příležitosti,
+                        které přinese budoucnost.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </AnimatedSection>
 
               {/* Tags */}
-              <div className="flex flex-wrap gap-2 mb-8 pb-8 border-b border-border">
-                {article.tags.map((tag) => (
-                  <span
-                    key={tag}
-                    className="px-3 py-1 text-xs font-medium bg-secondary text-secondary-foreground rounded-sm"
-                  >
-                    #{tag}
-                  </span>
-                ))}
-              </div>
+              <AnimatedSection delay={0.4}>
+                <div className="flex flex-wrap gap-2.5 mb-10 pb-10 border-b border-border">
+                  {article.tags.map((tag) => (
+                    <span
+                      key={tag}
+                      className="px-4 py-1.5 text-sm font-medium bg-secondary text-secondary-foreground rounded-sm hover:bg-secondary/80 transition-colors cursor-pointer"
+                    >
+                      #{tag}
+                    </span>
+                  ))}
+                </div>
+              </AnimatedSection>
 
               {/* In-article ad */}
-              <AdSlot position="in-article" className="my-8" />
+              <AdSlot position="in-article" className="my-10" />
 
               {/* Related articles */}
               {related.length > 0 && (
-                <div className="mb-8">
-                  <div className="flex items-center gap-3 mb-5">
-                    <h2 className="text-xl font-serif font-bold text-foreground">Mohlo by vás zajímat</h2>
-                    <div className="flex-1 h-px bg-border" />
+                <AnimatedSection delay={0.1}>
+                  <div className="mb-10">
+                    <div className="flex items-center gap-3 mb-6">
+                      <h2 className="text-2xl font-serif font-bold text-foreground">Mohlo by vás zajímat</h2>
+                      <div className="flex-1 h-px bg-border" />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {related.map((a) => (
+                        <Link key={a.id} href={`/clanek/${a.slug}`} className="no-underline group">
+                          <article className="overflow-hidden rounded-sm border border-border/40 bg-card hover:shadow-lg transition-all duration-300 hover:-translate-y-1">
+                            <div className="overflow-hidden aspect-[16/10]">
+                              <img
+                                src={a.image}
+                                alt={a.title}
+                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                                loading="lazy"
+                              />
+                            </div>
+                            <div className="p-4">
+                              <span
+                                className="inline-block px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white rounded-sm mb-2"
+                                style={{ backgroundColor: a.category.color }}
+                              >
+                                {a.category.name}
+                              </span>
+                              <h4 className="text-base font-serif font-bold text-foreground leading-snug group-hover:text-primary transition-colors line-clamp-2 mb-2">
+                                {a.title}
+                              </h4>
+                              <span className="text-xs text-muted-foreground">{formatDate(a.date)}</span>
+                            </div>
+                          </article>
+                        </Link>
+                      ))}
+                    </div>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {related.map((a) => (
-                      <Link key={a.id} href={`/clanek/${a.slug}`} className="no-underline group">
-                        <article className="article-card overflow-hidden rounded-sm border border-border/40 bg-card hover:shadow-md transition-shadow">
-                          <div className="overflow-hidden aspect-[16/10]">
-                            <img src={a.image} alt={a.title} className="w-full h-full object-cover" loading="lazy" />
-                          </div>
-                          <div className="p-3">
-                            <h4 className="text-sm font-serif font-bold text-foreground leading-snug group-hover:text-primary transition-colors line-clamp-2">
-                              {a.title}
-                            </h4>
-                            <span className="text-xs text-muted-foreground mt-1 block">{formatDate(a.date)}</span>
-                          </div>
-                        </article>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
+                </AnimatedSection>
               )}
             </div>
 
+            {/* Sidebar */}
             <div className="lg:w-1/3">
               <div className="lg:sticky lg:top-32">
                 <Sidebar />
