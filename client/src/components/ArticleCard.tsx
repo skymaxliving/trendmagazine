@@ -1,6 +1,6 @@
 /*
  * TrendMagazine.cz – Article Card Component
- * Design: "Warm Authority" – green accent bar, serif titles, warm tones
+ * Design: "Steel & Ink" – steel accent bar, serif titles, warm tones
  * Variants: featured (large), standard, compact (sidebar)
  */
 import { Link } from "wouter";
@@ -69,10 +69,10 @@ export default function ArticleCard({ article, variant = "standard" }: ArticleCa
             >
               {article.category.name}
             </span>
-            <h3 className="text-xl font-serif font-bold text-foreground leading-snug mb-2 group-hover:text-primary transition-colors">
+            <h3 className="text-lg sm:text-xl font-serif font-bold text-foreground leading-snug mb-2 group-hover:text-primary transition-colors">
               {article.title}
             </h3>
-            <p className="text-muted-foreground text-sm leading-relaxed mb-3 line-clamp-2">
+            <p className="text-muted-foreground text-sm leading-relaxed mb-3 line-clamp-2 hidden sm:block">
               {article.excerpt}
             </p>
             <div className="flex items-center gap-3 text-muted-foreground text-xs">

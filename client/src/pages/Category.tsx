@@ -1,6 +1,6 @@
 /*
  * TrendMagazine.cz – Category Page
- * Design: "Warm Authority" – category filtered view with sidebar
+ * Design: "Steel & Ink" – category filtered view with sidebar
  */
 import { useParams } from "wouter";
 import Header from "@/components/Header";
@@ -44,7 +44,7 @@ export default function Category() {
                 className="w-1.5 h-8 rounded-full"
                 style={{ backgroundColor: category.color }}
               />
-              <h1 className="text-3xl sm:text-4xl font-serif font-bold text-foreground">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-serif font-bold text-foreground">
                 {category.name}
               </h1>
             </div>

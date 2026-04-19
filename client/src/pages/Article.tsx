@@ -1,6 +1,6 @@
 /*
  * TrendMagazine.cz – Article Detail Page
- * Design: "Warm Authority" – reading-focused layout with progress bar
+ * Design: "Steel & Ink" – reading-focused layout with progress bar
  * SEO: Schema.org Article structured data, Open Graph
  */
 import { useParams } from "wouter";
@@ -136,10 +136,10 @@ export default function Article() {
           >
             {article.category.name}
           </span>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-serif font-bold text-foreground leading-tight mb-4">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-serif font-bold text-foreground leading-tight mb-4">
             {article.title}
           </h1>
-          <p className="text-lg text-muted-foreground leading-relaxed max-w-3xl mb-5">
+          <p className="text-base sm:text-lg text-muted-foreground leading-relaxed max-w-3xl mb-5">
             {article.excerpt}
           </p>
 

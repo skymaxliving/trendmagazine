@@ -1,9 +1,11 @@
 /*
  * TrendMagazine.cz – Hero Carousel Component
+ * Design: "Steel & Ink"
  * Auto-rotating carousel with 3-5 featured articles
  * Manual navigation via dots and arrows
+ * Fully responsive – arrows hidden on mobile, swipe-friendly
  */
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "wouter";
 import { type Article, formatDate } from "@/lib/data";
 import { Clock, ChevronLeft, ChevronRight } from "lucide-react";
@@ -17,6 +19,8 @@ export default function HeroCarousel({ articles }: HeroCarouselProps) {
   const [current, setCurrent] = useState(0);
   const [direction, setDirection] = useState(1);
   const [paused, setPaused] = useState(false);
+  const touchStartX = useRef(0);
+  const touchEndX = useRef(0);
 
   const goTo = useCallback(
     (index: number) => {
@@ -43,6 +47,21 @@ export default function HeroCarousel({ articles }: HeroCarouselProps) {
     return () => clearInterval(timer);
   }, [next, paused]);
 
+  // Touch/swipe support for mobile
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+  const handleTouchEnd = () => {
+    const diff = touchStartX.current - touchEndX.current;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) next();
+      else prev();
+    }
+  };
+
   const article = articles[current];
   if (!article) return null;
 
@@ -66,9 +85,12 @@ export default function HeroCarousel({ articles }: HeroCarouselProps) {
       className="relative overflow-hidden rounded-sm"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
     >
-      {/* Slide container */}
-      <div className="relative aspect-[16/9] lg:aspect-[21/9]">
+      {/* Slide container – taller on mobile for readability */}
+      <div className="relative aspect-[4/5] sm:aspect-[16/9] lg:aspect-[21/9]">
         <AnimatePresence mode="wait" custom={direction}>
           <motion.div
             key={article.id}
@@ -80,74 +102,81 @@ export default function HeroCarousel({ articles }: HeroCarouselProps) {
             transition={{ duration: 0.45, ease: "easeInOut" }}
             className="absolute inset-0"
           >
-            <Link href={`/clanek/${article.slug}`} className="no-underline group block h-full">
-              <article className="relative h-full">
-                <img
-                  src={article.image}
-                  alt={article.title}
-                  className="absolute inset-0 w-full h-full object-cover"
-                  loading={current === 0 ? "eager" : "lazy"}
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-8 lg:p-12">
-                  <span
-                    className="inline-block px-3 py-1 text-xs font-semibold uppercase tracking-wider text-white rounded-sm mb-3"
-                    style={{ backgroundColor: article.category.color }}
-                  >
-                    {article.category.name}
+            {/* Image + gradient background – always visible */}
+            <img
+              src={article.image}
+              alt={article.title}
+              className="absolute inset-0 w-full h-full object-cover"
+              loading={current === 0 ? "eager" : "lazy"}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10" />
+
+            {/* Text content – padded away from edges so arrows don't overlap */}
+            <Link href={`/clanek/${article.slug}`} className="no-underline group block absolute inset-0">
+              <div className="absolute bottom-0 left-0 right-0 p-5 pb-10 sm:p-8 sm:pb-10 lg:p-12 lg:pb-12 sm:pr-16 sm:pl-16">
+                <span
+                  className="inline-block px-2.5 py-0.5 text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-white rounded-sm mb-2 sm:mb-3"
+                  style={{ backgroundColor: article.category.color }}
+                >
+                  {article.category.name}
+                </span>
+                <h2 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-serif font-bold text-white leading-tight mb-2 sm:mb-3 group-hover:underline decoration-2 underline-offset-4">
+                  {article.title}
+                </h2>
+                <p className="text-white/80 text-sm sm:text-base max-w-2xl leading-relaxed mb-2 sm:mb-3 hidden sm:block line-clamp-2">
+                  {article.excerpt}
+                </p>
+                <div className="flex items-center gap-3 sm:gap-4 text-white/60 text-[11px] sm:text-xs">
+                  <span>{article.author}</span>
+                  <span>{formatDate(article.date)}</span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-3 h-3" /> {article.readTime} min
                   </span>
-                  <h2 className="text-2xl sm:text-3xl lg:text-4xl font-serif font-bold text-white leading-tight mb-3 group-hover:underline decoration-2 underline-offset-4">
-                    {article.title}
-                  </h2>
-                  <p className="text-white/80 text-sm sm:text-base max-w-2xl leading-relaxed mb-3 hidden sm:block">
-                    {article.excerpt}
-                  </p>
-                  <div className="flex items-center gap-4 text-white/60 text-xs">
-                    <span>{article.author}</span>
-                    <span>{formatDate(article.date)}</span>
-                    <span className="flex items-center gap-1">
-                      <Clock className="w-3 h-3" /> {article.readTime} min
-                    </span>
-                  </div>
                 </div>
-              </article>
+              </div>
             </Link>
           </motion.div>
         </AnimatePresence>
       </div>
 
-      {/* Navigation arrows */}
+      {/* Navigation arrows – hidden on small mobile, visible from sm up */}
       <button
+        type="button"
         onClick={(e) => {
           e.preventDefault();
+          e.stopPropagation();
           prev();
         }}
-        className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center bg-black/30 hover:bg-black/50 text-white rounded-full backdrop-blur-sm transition-colors z-10"
+        className="absolute left-2 sm:left-4 top-1/3 sm:top-1/2 -translate-y-1/2 w-9 h-9 sm:w-11 sm:h-11 hidden sm:flex items-center justify-center bg-black/40 hover:bg-black/60 active:bg-black/70 text-white rounded-full backdrop-blur-sm transition-colors z-20 cursor-pointer"
         aria-label="Předchozí článek"
       >
         <ChevronLeft className="w-5 h-5" />
       </button>
       <button
+        type="button"
         onClick={(e) => {
           e.preventDefault();
+          e.stopPropagation();
           next();
         }}
-        className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 flex items-center justify-center bg-black/30 hover:bg-black/50 text-white rounded-full backdrop-blur-sm transition-colors z-10"
+        className="absolute right-2 sm:right-4 top-1/3 sm:top-1/2 -translate-y-1/2 w-9 h-9 sm:w-11 sm:h-11 hidden sm:flex items-center justify-center bg-black/40 hover:bg-black/60 active:bg-black/70 text-white rounded-full backdrop-blur-sm transition-colors z-20 cursor-pointer"
         aria-label="Další článek"
       >
         <ChevronRight className="w-5 h-5" />
       </button>
 
       {/* Dot indicators */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex items-center gap-2 z-10">
+      <div className="absolute bottom-3 sm:bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20">
         {articles.map((_, index) => (
           <button
             key={index}
+            type="button"
             onClick={(e) => {
               e.preventDefault();
+              e.stopPropagation();
               goTo(index);
             }}
-            className={`h-2 rounded-full transition-all duration-300 ${
+            className={`h-2 rounded-full transition-all duration-300 cursor-pointer ${
               index === current
                 ? "w-6 bg-white"
                 : "w-2 bg-white/50 hover:bg-white/70"
@@ -159,7 +188,7 @@ export default function HeroCarousel({ articles }: HeroCarouselProps) {
 
       {/* Progress bar */}
       {!paused && (
-        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/10 z-10">
+        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/10 z-20">
           <motion.div
             key={current}
             className="h-full bg-white/60"
