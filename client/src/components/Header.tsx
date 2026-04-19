@@ -52,7 +52,7 @@ export default function Header() {
 
         {/* Desktop nav */}
         <nav className="hidden lg:flex items-center gap-1">
-          {categories.slice(0, 6).map((cat) => (
+          {categories.slice(0, 7).map((cat) => (
             <Link
               key={cat.id}
               href={`/kategorie/${cat.slug}`}
@@ -70,7 +70,7 @@ export default function Header() {
               Více <ChevronDown className="w-3 h-3" />
             </button>
             <div className="absolute right-0 top-full mt-1 w-48 bg-card border border-border rounded-sm shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
-              {categories.slice(6).map((cat) => (
+              {categories.slice(7).map((cat) => (
                 <Link
                   key={cat.id}
                   href={`/kategorie/${cat.slug}`}

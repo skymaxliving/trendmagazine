@@ -12,12 +12,12 @@ import AdSlot from "@/components/AdSlot";
 import { articles, categories, getArticlesByCategory } from "@/lib/data";
 
 export default function Home() {
-  // Top 5 articles for carousel
-  const heroArticles = articles.slice(0, 5);
-  // Next 3 for featured grid
-  const featuredArticles = articles.slice(5, 8);
-  // Rest for latest
-  const latestArticles = articles.slice(8);
+  // Top 5 articles for carousel (featured)
+  const heroArticles = articles.filter(a => a.featured).slice(0, 5);
+  // Next 3 non-featured for featured grid
+  const featuredArticles = articles.filter(a => !a.featured).slice(0, 3);
+  // Next batch for latest section
+  const latestArticles = articles.filter(a => !a.featured).slice(3, 9);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -79,7 +79,7 @@ export default function Home() {
               <AdSlot position="in-article" className="my-8" />
 
               {/* Category Sections */}
-              {categories.slice(0, 4).map((category) => {
+              {categories.slice(0, 6).map((category) => {
                 const catArticles = getArticlesByCategory(category.slug);
                 if (catArticles.length === 0) return null;
                 return (

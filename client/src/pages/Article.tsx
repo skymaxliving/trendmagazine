@@ -81,12 +81,23 @@ export default function Article() {
     .filter((a) => a.category.id === article.category.id && a.id !== article.id)
     .slice(0, 3);
 
+  // Travel category Booking.com affiliate box
+  const bookingAffiliate = article.category.id === "cestovani" ? `
+    <div style="background: linear-gradient(135deg, #003580 0%, #0057b8 100%); border-radius: 6px; padding: 24px; margin: 24px 0; color: white;">
+      <p style="font-size: 18px; font-weight: bold; margin-bottom: 8px; color: white;">Zarezervujte si ubytování</p>
+      <p style="font-size: 14px; opacity: 0.9; margin-bottom: 16px; color: white;">Najděte nejlepší hotely a apartmány pro vaši cestu na Booking.com</p>
+      <a href="https://www.booking.com" target="_blank" rel="noopener noreferrer sponsored" style="display: inline-block; background: #febb02; color: #003580; font-weight: bold; padding: 10px 24px; border-radius: 4px; text-decoration: none; font-size: 14px;">Hledat ubytování &rarr;</a>
+      <p style="font-size: 11px; opacity: 0.6; margin-top: 12px; color: white;">Partnerský odkaz – jako člen affiliate programu můžeme získat provizi za rezervace.</p>
+    </div>
+  ` : "";
+
   // Sample article body content
   const articleBody = `
     <p>${article.excerpt}</p>
     <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
     <h2>Hlavní zjištění</h2>
     <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+    ${bookingAffiliate}
     <p>Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo.</p>
     <h2>Co to znamená pro budoucnost</h2>
     <p>Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet.</p>

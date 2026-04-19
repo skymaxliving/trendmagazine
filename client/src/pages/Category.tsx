@@ -15,8 +15,7 @@ export default function Category() {
   const category = getCategoryBySlug(slug || "");
   const categoryArticles = slug ? getArticlesByCategory(slug) : [];
 
-  // If no articles in this category, show all articles as fallback
-  const displayArticles = categoryArticles.length > 0 ? categoryArticles : articles;
+  const displayArticles = categoryArticles;
 
   if (!category) {
     return (
