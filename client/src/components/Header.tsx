@@ -29,15 +29,23 @@ export default function Header() {
       {/* Main header */}
       <div className="container flex items-center justify-between py-4">
         <Link href="/" className="flex items-center gap-3 no-underline">
-          <div className="w-10 h-10 rounded-sm bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-serif font-bold text-lg">TM</span>
+          {/* Icon – mobile & desktop */}
+          <div className="w-10 h-10 rounded-sm bg-[#1E293B] flex items-center justify-center sm:hidden">
+            <div className="flex items-center gap-px">
+              <span className="text-sm font-serif font-bold text-white leading-none">T</span>
+              <span className="w-[1px] h-3.5 bg-[#EF4444] rounded-full" />
+              <span className="text-sm font-serif font-bold text-white leading-none">M</span>
+            </div>
           </div>
+          {/* Full logo – desktop */}
           <div className="hidden sm:block">
-            <h1 className="text-xl font-serif font-bold text-foreground leading-none tracking-tight">
-              TrendMagazine
-            </h1>
-            <p className="text-[11px] text-muted-foreground tracking-widest uppercase mt-0.5">
-              Váš průvodce světem trendů
+            <div className="flex items-center gap-2 text-[22px] font-serif font-bold tracking-tight leading-none text-[#1E293B]">
+              <span>TREND</span>
+              <span className="w-[2px] h-5 bg-[#DC2626] rounded-full" />
+              <span>MAGAZINE</span>
+            </div>
+            <p className="text-[9px] uppercase tracking-[0.25em] text-[#1E293B]/45 font-medium mt-1">
+              Fakta · Trendy · Perspektiva
             </p>
           </div>
         </Link>

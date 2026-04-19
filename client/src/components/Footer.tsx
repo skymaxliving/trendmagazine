@@ -60,14 +60,15 @@ export default function Footer() {
         <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-x-6 gap-y-8">
           {/* Brand */}
           <div className="col-span-2 md:col-span-3 lg:col-span-1">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-9 h-9 rounded-sm bg-white/10 flex items-center justify-center">
-                <span className="text-white font-serif font-bold text-base">TM</span>
+            <div className="mb-4">
+              <div className="flex items-center gap-2 text-lg font-serif font-bold tracking-tight leading-none text-white">
+                <span>TREND</span>
+                <span className="w-[1.5px] h-4 bg-[#EF4444] rounded-full" />
+                <span>MAGAZINE</span>
               </div>
-              <div>
-                <h3 className="text-lg font-serif font-bold text-white leading-none">TrendMagazine</h3>
-                <p className="text-[10px] tracking-widest uppercase text-white/40 mt-0.5">.cz</p>
-              </div>
+              <p className="text-[8px] uppercase tracking-[0.25em] text-white/35 font-medium mt-1">
+                Fakta · Trendy · Perspektiva
+              </p>
             </div>
             <p className="text-sm text-white/50 leading-relaxed mb-5">
               Nezávislý český online magazín přinášející aktuální zprávy, analýzy a trendy ze světa businessu, technologií a životního stylu.
