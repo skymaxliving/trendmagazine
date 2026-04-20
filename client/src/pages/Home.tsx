@@ -27,8 +27,8 @@ export default function Home() {
       <Header />
 
       <main className="flex-1 overflow-x-hidden">
-        {/* Hero Carousel – full-width on mobile, contained on desktop */}
-        <section className="px-4 sm:px-0 sm:container mt-0 sm:mt-6 mb-4 sm:mb-8 overflow-hidden">
+        {/* Hero Carousel – full-width on all screens */}
+        <section className="w-full mt-0 sm:mt-0 mb-4 sm:mb-8 overflow-hidden">
           <HeroCarousel articles={heroArticles} />
         </section>
 

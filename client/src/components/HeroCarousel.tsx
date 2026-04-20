@@ -176,7 +176,7 @@ export default function HeroCarousel({ articles }: HeroCarouselProps) {
   /* ─── Desktop: animated carousel with arrows ─── */
   return (
     <div
-      className="relative overflow-hidden rounded-sm"
+      className="relative overflow-hidden"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onTouchStart={handleTouchStart}
