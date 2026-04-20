@@ -509,40 +509,54 @@ export default function InfoBar() {
     <div className="hidden sm:block mb-6">
       <div className="container">
         <div className="bg-[#0F172A] rounded-md overflow-hidden">
-          {/* Top row: Name day + Horoscope + FX rates */}
+          {/* Top row: Name day + Horoscope + Travel + FX rates */}
           <div className="flex items-center justify-between py-3 px-6 border-b border-white/[0.06]">
             {/* Name Day */}
-            <div className="flex items-center gap-3">
-              <span className="text-white/40 text-xs font-sans tracking-widest uppercase">Svátek</span>
-              <span className="w-px h-3.5 bg-white/15" />
+            <div className="flex items-center gap-2.5">
+              <span className="text-white/70 text-xs font-sans tracking-wide">Dnes má svátek:</span>
               <span className="font-serif font-semibold text-white text-[15px]">{nameDay}</span>
             </div>
+
+            <span className="w-px h-3.5 bg-white/15 hidden lg:block" />
 
             {/* Horoscope Link */}
             <button
               onClick={handleHoroscopeClick}
-              className="flex items-center gap-2 text-white/40 hover:text-white transition-colors group"
+              className="flex items-center gap-2 text-white/70 hover:text-white transition-colors group hidden md:flex"
             >
-              <span className="text-xs font-sans tracking-widest uppercase">Horoskop</span>
-              <span className="text-white/20 group-hover:text-white/50 transition-colors text-xs">→</span>
+              <span className="text-xs font-sans tracking-wide">Co dnes říká váš horoskop</span>
+              <span className="text-white/40 group-hover:text-white/80 transition-colors text-xs">→</span>
             </button>
+
+            <span className="w-px h-3.5 bg-white/15 hidden lg:block" />
+
+            {/* Travel Link */}
+            <a
+              href="/kategorie/cestovani"
+              className="flex items-center gap-2 text-white/70 hover:text-white transition-colors group hidden lg:flex"
+            >
+              <span className="text-xs font-sans tracking-wide">Kam letos na dovolenou</span>
+              <span className="text-white/40 group-hover:text-white/80 transition-colors text-xs">→</span>
+            </a>
+
+            <span className="w-px h-3.5 bg-white/15 hidden md:block" />
 
             {/* Exchange Rates */}
             <div className="flex items-center gap-4">
               {rates.eurCzk !== null ? (
                 <>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-sans text-white/35 tracking-wider uppercase">EUR/CZK</span>
+                    <span className="text-[11px] font-sans text-white/60 tracking-wider uppercase">EUR/CZK</span>
                     <span className="font-mono font-semibold text-white text-[13px] tabular-nums">{rates.eurCzk.toFixed(3)}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[10px] font-sans text-white/35 tracking-wider uppercase">USD/CZK</span>
+                    <span className="text-[11px] font-sans text-white/60 tracking-wider uppercase">USD/CZK</span>
                     <span className="font-mono font-semibold text-white text-[13px] tabular-nums">{rates.usdCzk?.toFixed(3)}</span>
                   </div>
                 </>
               ) : (
-                <div className="flex items-center gap-2 text-xs text-white/30">
-                  <div className="w-3 h-3 border-2 border-white/15 border-t-white/50 rounded-full animate-spin" />
+                <div className="flex items-center gap-2 text-xs text-white/40">
+                  <div className="w-3 h-3 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
                   <span>Kurzy…</span>
                 </div>
               )}
