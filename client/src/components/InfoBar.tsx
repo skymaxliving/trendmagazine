@@ -5,7 +5,6 @@
  * Design: "Steel & Ink" – subtle, editorial, matching the magazine aesthetic
  */
 import { useState, useEffect, useMemo } from "react";
-import { Cake, Star, TrendingUp, TrendingDown, Minus, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 
 /* ─── Czech Name Days (official calendar) ─── */
@@ -433,54 +432,48 @@ export default function InfoBar() {
   };
 
   return (
-    <div className="hidden sm:block">
+    <div className="hidden sm:block mb-6">
       <div className="container">
-        <div className="flex items-center justify-between py-2.5 px-4 bg-[#1E293B]/[0.04] border border-border/60 rounded-md">
+        <div className="flex items-center justify-between py-3.5 px-6 bg-[#1E293B] rounded-md">
           {/* Name Day */}
-          <div className="flex items-center gap-2 text-sm text-foreground/80">
-            <Cake className="w-3.5 h-3.5 text-accent shrink-0" />
-            <span className="text-muted-foreground text-xs">Dnes má svátek</span>
-            <span className="font-serif font-semibold text-foreground">{nameDay}</span>
+          <div className="flex items-center gap-3">
+            <span className="text-white/50 text-sm font-sans tracking-wide uppercase">Svátek</span>
+            <span className="w-px h-4 bg-white/20" />
+            <span className="font-serif font-semibold text-white text-base">{nameDay}</span>
           </div>
-
-          {/* Divider */}
-          <div className="w-px h-4 bg-border/80 mx-2" />
 
           {/* Horoscope Link */}
           <button
             onClick={handleHoroscopeClick}
-            className="flex items-center gap-1.5 text-sm text-foreground/70 hover:text-accent transition-colors group"
+            className="flex items-center gap-2 text-white/50 hover:text-white transition-colors group"
           >
-            <Star className="w-3.5 h-3.5 text-accent/70 group-hover:text-accent shrink-0" />
-            <span className="text-xs">Dnešní horoskop</span>
-            <ArrowRight className="w-3 h-3 opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+            <span className="text-sm font-sans tracking-wide uppercase">Horoskop</span>
+            <span className="text-white/30 group-hover:text-white/60 transition-colors text-xs">→</span>
           </button>
 
-          {/* Divider */}
-          <div className="w-px h-4 bg-border/80 mx-2" />
-
           {/* Exchange Rates */}
-          <div className="flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-5">
             {rates.eurCzk !== null ? (
               <>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-mono font-bold text-muted-foreground tracking-wider">EUR/CZK</span>
-                  <span className="font-mono font-semibold text-foreground tabular-nums">{rates.eurCzk.toFixed(3)}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-sans text-white/40 tracking-wider uppercase">EUR/CZK</span>
+                  <span className="font-mono font-semibold text-white text-base tabular-nums">{rates.eurCzk.toFixed(3)}</span>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[10px] font-mono font-bold text-muted-foreground tracking-wider">USD/CZK</span>
-                  <span className="font-mono font-semibold text-foreground tabular-nums">{rates.usdCzk?.toFixed(3)}</span>
+                <span className="w-px h-4 bg-white/20" />
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-sans text-white/40 tracking-wider uppercase">USD/CZK</span>
+                  <span className="font-mono font-semibold text-white text-base tabular-nums">{rates.usdCzk?.toFixed(3)}</span>
                 </div>
                 {rates.date && (
-                  <span className="text-[10px] text-muted-foreground/60 hidden lg:inline">
-                    ČNB {rates.date}
+                  <span className="text-[11px] text-white/25 hidden lg:inline ml-1">
+                    {rates.date}
                   </span>
                 )}
               </>
             ) : (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                <div className="w-3 h-3 border-2 border-muted-foreground/30 border-t-muted-foreground rounded-full animate-spin" />
-                <span>Načítám kurzy…</span>
+              <div className="flex items-center gap-2 text-sm text-white/40">
+                <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
+                <span>Kurzy…</span>
               </div>
             )}
           </div>
