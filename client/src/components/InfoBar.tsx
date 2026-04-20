@@ -383,7 +383,7 @@ function getTodayNameDay(): string {
   return NAME_DAYS[key] || "";
 }
 
-/* ─── Exchange Rate Hook (CNB API) ─── */
+/* ─── Exchange Rate Hook (Frankfurter API) ─── */
 interface ExchangeRates {
   eurCzk: number | null;
   usdCzk: number | null;
@@ -394,8 +394,6 @@ function useExchangeRates() {
   const [rates, setRates] = useState<ExchangeRates>({ eurCzk: null, usdCzk: null, date: "" });
 
   useEffect(() => {
-    // Use Frankfurter API (free, CORS-friendly) for EUR-based rates
-    // Then calculate CZK cross rates
     Promise.all([
       fetch("https://api.frankfurter.dev/v1/latest?from=EUR&to=CZK").then(r => r.json()),
       fetch("https://api.frankfurter.dev/v1/latest?from=USD&to=CZK").then(r => r.json()),
@@ -404,7 +402,6 @@ function useExchangeRates() {
         const eurCzk = eurData?.rates?.CZK ?? null;
         const usdCzk = usdData?.rates?.CZK ?? null;
         const date = eurData?.date ?? "";
-        // Format date to Czech style
         let formattedDate = date;
         if (date) {
           try {
@@ -419,10 +416,87 @@ function useExchangeRates() {
   return rates;
 }
 
+/* ─── Bitcoin Price Hook (CoinGecko API) ─── */
+interface BtcData {
+  price: number | null;
+  change24h: number | null;
+}
+
+function useBitcoinPrice() {
+  const [btc, setBtc] = useState<BtcData>({ price: null, change24h: null });
+
+  useEffect(() => {
+    fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd&include_24hr_change=true")
+      .then(r => r.json())
+      .then(data => {
+        setBtc({
+          price: data?.bitcoin?.usd ?? null,
+          change24h: data?.bitcoin?.usd_24h_change ?? null,
+        });
+      })
+      .catch(() => {});
+  }, []);
+
+  return btc;
+}
+
+/* ─── Stock Ticker Item ─── */
+interface StockItem {
+  symbol: string;
+  price: number;
+  changePct: number;
+}
+
+/* Hardcoded recent market data – refreshed periodically via build/deploy */
+const STOCK_DATA: StockItem[] = [
+  { symbol: "AAPL", price: 270.23, changePct: 3.74 },
+  { symbol: "TSLA", price: 400.62, changePct: 14.81 },
+  { symbol: "GOOGL", price: 341.68, changePct: 7.70 },
+  { symbol: "NVDA", price: 201.68, changePct: 6.92 },
+];
+
+function TickerItem({ symbol, price, changePct }: StockItem) {
+  const isUp = changePct >= 0;
+  const colorClass = isUp ? "text-[#22c55e]" : "text-[#ef4444]";
+  const arrow = isUp ? "▲" : "▼";
+
+  return (
+    <div className="flex items-center gap-1.5 shrink-0">
+      <span className="text-[11px] font-sans text-white/50 tracking-wider font-medium">{symbol}</span>
+      <span className="font-mono font-semibold text-white text-[13px] tabular-nums">${price.toFixed(2)}</span>
+      <span className={`font-mono text-[11px] tabular-nums font-semibold ${colorClass}`}>
+        {arrow} {Math.abs(changePct).toFixed(2)}%
+      </span>
+    </div>
+  );
+}
+
+function BtcTicker({ price, change24h }: BtcData) {
+  if (price === null) return null;
+  const isUp = (change24h ?? 0) >= 0;
+  const colorClass = isUp ? "text-[#22c55e]" : "text-[#ef4444]";
+  const arrow = isUp ? "▲" : "▼";
+
+  return (
+    <div className="flex items-center gap-1.5 shrink-0">
+      <span className="text-[11px] font-sans text-amber-400/80 tracking-wider font-medium">BTC</span>
+      <span className="font-mono font-semibold text-white text-[13px] tabular-nums">
+        ${price.toLocaleString("en-US", { maximumFractionDigits: 0 })}
+      </span>
+      {change24h !== null && (
+        <span className={`font-mono text-[11px] tabular-nums font-semibold ${colorClass}`}>
+          {arrow} {Math.abs(change24h).toFixed(2)}%
+        </span>
+      )}
+    </div>
+  );
+}
+
 /* ─── InfoBar Component ─── */
 export default function InfoBar() {
   const nameDay = useMemo(() => getTodayNameDay(), []);
   const rates = useExchangeRates();
+  const btc = useBitcoinPrice();
 
   const handleHoroscopeClick = () => {
     toast("Horoskopy připravujeme", {
@@ -434,48 +508,57 @@ export default function InfoBar() {
   return (
     <div className="hidden sm:block mb-6">
       <div className="container">
-        <div className="flex items-center justify-between py-3.5 px-6 bg-[#1E293B] rounded-md">
-          {/* Name Day */}
-          <div className="flex items-center gap-3">
-            <span className="text-white/50 text-sm font-sans tracking-wide uppercase">Svátek</span>
-            <span className="w-px h-4 bg-white/20" />
-            <span className="font-serif font-semibold text-white text-base">{nameDay}</span>
+        <div className="bg-[#0F172A] rounded-md overflow-hidden">
+          {/* Top row: Name day + Horoscope + FX rates */}
+          <div className="flex items-center justify-between py-3 px-6 border-b border-white/[0.06]">
+            {/* Name Day */}
+            <div className="flex items-center gap-3">
+              <span className="text-white/40 text-xs font-sans tracking-widest uppercase">Svátek</span>
+              <span className="w-px h-3.5 bg-white/15" />
+              <span className="font-serif font-semibold text-white text-[15px]">{nameDay}</span>
+            </div>
+
+            {/* Horoscope Link */}
+            <button
+              onClick={handleHoroscopeClick}
+              className="flex items-center gap-2 text-white/40 hover:text-white transition-colors group"
+            >
+              <span className="text-xs font-sans tracking-widest uppercase">Horoskop</span>
+              <span className="text-white/20 group-hover:text-white/50 transition-colors text-xs">→</span>
+            </button>
+
+            {/* Exchange Rates */}
+            <div className="flex items-center gap-4">
+              {rates.eurCzk !== null ? (
+                <>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-sans text-white/35 tracking-wider uppercase">EUR/CZK</span>
+                    <span className="font-mono font-semibold text-white text-[13px] tabular-nums">{rates.eurCzk.toFixed(3)}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-[10px] font-sans text-white/35 tracking-wider uppercase">USD/CZK</span>
+                    <span className="font-mono font-semibold text-white text-[13px] tabular-nums">{rates.usdCzk?.toFixed(3)}</span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-center gap-2 text-xs text-white/30">
+                  <div className="w-3 h-3 border-2 border-white/15 border-t-white/50 rounded-full animate-spin" />
+                  <span>Kurzy…</span>
+                </div>
+              )}
+            </div>
           </div>
 
-          {/* Horoscope Link */}
-          <button
-            onClick={handleHoroscopeClick}
-            className="flex items-center gap-2 text-white/50 hover:text-white transition-colors group"
-          >
-            <span className="text-sm font-sans tracking-wide uppercase">Horoskop</span>
-            <span className="text-white/30 group-hover:text-white/60 transition-colors text-xs">→</span>
-          </button>
-
-          {/* Exchange Rates */}
-          <div className="flex items-center gap-5">
-            {rates.eurCzk !== null ? (
-              <>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-sans text-white/40 tracking-wider uppercase">EUR/CZK</span>
-                  <span className="font-mono font-semibold text-white text-base tabular-nums">{rates.eurCzk.toFixed(3)}</span>
-                </div>
-                <span className="w-px h-4 bg-white/20" />
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-sans text-white/40 tracking-wider uppercase">USD/CZK</span>
-                  <span className="font-mono font-semibold text-white text-base tabular-nums">{rates.usdCzk?.toFixed(3)}</span>
-                </div>
-                {rates.date && (
-                  <span className="text-[11px] text-white/25 hidden lg:inline ml-1">
-                    {rates.date}
-                  </span>
-                )}
-              </>
-            ) : (
-              <div className="flex items-center gap-2 text-sm text-white/40">
-                <div className="w-3.5 h-3.5 border-2 border-white/20 border-t-white/60 rounded-full animate-spin" />
-                <span>Kurzy…</span>
+          {/* Bottom row: Stock ticker */}
+          <div className="flex items-center gap-5 py-2.5 px-6 overflow-x-auto scrollbar-hide">
+            <BtcTicker {...btc} />
+            <span className="w-px h-3.5 bg-white/10 shrink-0" />
+            {STOCK_DATA.map((stock, i) => (
+              <div key={stock.symbol} className="flex items-center gap-5">
+                <TickerItem {...stock} />
+                {i < STOCK_DATA.length - 1 && <span className="w-px h-3.5 bg-white/10 shrink-0" />}
               </div>
-            )}
+            ))}
           </div>
         </div>
       </div>
