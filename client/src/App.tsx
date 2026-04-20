@@ -14,8 +14,8 @@ import About from "./pages/About";
 import Ethics from "./pages/Ethics";
 import CookieConsent from "./components/CookieConsent";
 import ScrollToTop from "./components/ScrollToTop";
-
 function Router() {
+  // make sure to consider if you need authentication for certain routes
   return (
     <Switch>
       <Route path="/" component={Home} />
