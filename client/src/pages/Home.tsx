@@ -24,8 +24,8 @@ export default function Home() {
       <Header />
 
       <main className="flex-1">
-        {/* Hero Carousel */}
-        <section className="container mt-6 mb-8">
+        {/* Hero Carousel – full-width on mobile, contained on desktop */}
+        <section className="sm:container mt-0 sm:mt-6 mb-6 sm:mb-8">
           <HeroCarousel articles={heroArticles} />
         </section>
 

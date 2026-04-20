@@ -316,16 +316,11 @@ body::before {
   }
 }
 
-/* ─── Stock Ticker Marquee Animation ─── */
-@keyframes ticker-scroll {
-  0% { transform: translateX(0); }
-  100% { transform: translateX(-33.333%); }
+/* ─── Hide scrollbar for mobile carousel ─── */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }
-
-.animate-ticker {
-  animation: ticker-scroll 30s linear infinite;
-}
-
-.animate-ticker:hover {
-  animation-play-state: paused;
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
