@@ -1,28 +1,103 @@
 /*
  * TrendMagazine.cz – Header Component
  * Design: "Steel & Ink" – dark steel primary, warm béžové bg, serif headings
- * Features: Logo, navigation with categories, mobile menu, search
+ * Features: Logo, navigation with categories, mobile menu, search, date & weather
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { categories } from "@/lib/data";
-import { Menu, X, Search, ChevronDown } from "lucide-react";
+import { Menu, X, Search, ChevronDown, CloudSun, Cloud, Sun, CloudRain, CloudSnow, CloudLightning, CloudDrizzle, Thermometer } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+
+interface WeatherData {
+  temperature: number;
+  weatherCode: number;
+}
+
+function useWeather() {
+  const [weather, setWeather] = useState<WeatherData | null>(null);
+
+  useEffect(() => {
+    // Open-Meteo API – free, no key needed. Prague coords: 50.08, 14.42
+    fetch("https://api.open-meteo.com/v1/forecast?latitude=50.08&longitude=14.42&current=temperature_2m,weather_code&timezone=Europe%2FPrague")
+      .then(res => res.json())
+      .then(data => {
+        if (data?.current) {
+          setWeather({
+            temperature: Math.round(data.current.temperature_2m),
+            weatherCode: data.current.weather_code,
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  return weather;
+}
+
+function getWeatherIcon(code: number) {
+  // WMO Weather interpretation codes
+  if (code === 0) return <Sun className="w-3.5 h-3.5" />;
+  if (code <= 3) return <CloudSun className="w-3.5 h-3.5" />;
+  if (code <= 48) return <Cloud className="w-3.5 h-3.5" />;
+  if (code <= 57) return <CloudDrizzle className="w-3.5 h-3.5" />;
+  if (code <= 67) return <CloudRain className="w-3.5 h-3.5" />;
+  if (code <= 77) return <CloudSnow className="w-3.5 h-3.5" />;
+  if (code <= 82) return <CloudRain className="w-3.5 h-3.5" />;
+  if (code <= 86) return <CloudSnow className="w-3.5 h-3.5" />;
+  if (code <= 99) return <CloudLightning className="w-3.5 h-3.5" />;
+  return <Thermometer className="w-3.5 h-3.5" />;
+}
+
+function getWeatherLabel(code: number): string {
+  if (code === 0) return "Jasno";
+  if (code <= 3) return "Polojasno";
+  if (code <= 48) return "Zataženo";
+  if (code <= 57) return "Mrholení";
+  if (code <= 67) return "Déšť";
+  if (code <= 77) return "Sněžení";
+  if (code <= 82) return "Přeháňky";
+  if (code <= 86) return "Sněhové přeháňky";
+  if (code <= 99) return "Bouřka";
+  return "";
+}
+
+function formatCzechDate(): string {
+  const now = new Date();
+  return now.toLocaleDateString("cs-CZ", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
 
 export default function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [location] = useLocation();
+  const weather = useWeather();
 
   return (
     <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border">
-      {/* Top bar */}
-      <div className="container flex items-center justify-between h-10 text-xs text-muted-foreground border-b border-border/50">
-        <div className="flex items-center gap-4">
-          <span>{new Date().toLocaleDateString("cs-CZ", { weekday: "long", day: "numeric", month: "long", year: "numeric" })}</span>
-        </div>
-        <div className="hidden sm:flex items-center gap-4">
-          <span>Nezávislý český magazín</span>
+      {/* Top bar – date & weather */}
+      <div className="bg-[#1E293B] text-white/80">
+        <div className="container flex items-center justify-between h-8 text-[11px] tracking-wide">
+          <div className="flex items-center gap-1.5">
+            <span className="uppercase font-medium">{formatCzechDate()}</span>
+          </div>
+          <div className="flex items-center gap-4">
+            {weather && (
+              <div className="flex items-center gap-1.5">
+                {getWeatherIcon(weather.weatherCode)}
+                <span className="font-medium">Praha {weather.temperature}°C</span>
+                <span className="hidden sm:inline text-white/50">·</span>
+                <span className="hidden sm:inline text-white/60">{getWeatherLabel(weather.weatherCode)}</span>
+              </div>
+            )}
+            <span className="hidden md:inline text-white/40">|</span>
+            <span className="hidden md:inline text-white/60">Nezávislý český magazín</span>
+          </div>
         </div>
       </div>
 
