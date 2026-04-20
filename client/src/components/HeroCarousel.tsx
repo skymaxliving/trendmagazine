@@ -176,14 +176,14 @@ export default function HeroCarousel({ articles }: HeroCarouselProps) {
   /* ─── Desktop: animated carousel with arrows ─── */
   return (
     <div
-      className="relative overflow-hidden"
+      className="relative overflow-hidden rounded-lg"
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      <div className="relative aspect-[16/9] lg:aspect-[2/1]">
+      <div className="relative aspect-[16/9] lg:aspect-[21/9]">
         <AnimatePresence mode="wait" custom={direction}>
           <motion.div
             key={article.id}
