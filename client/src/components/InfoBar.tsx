@@ -513,7 +513,7 @@ export default function InfoBar() {
           <div className="flex items-center justify-between py-3 px-6 border-b border-white/[0.06]">
             {/* Name Day */}
             <div className="flex items-center gap-2.5">
-              <span className="text-white/70 text-xs font-sans tracking-wide">Dnes má svátek:</span>
+              <span className="text-white/90 text-sm font-sans tracking-wide">Dnes má svátek:</span>
               <span className="font-serif font-semibold text-white text-[15px]">{nameDay}</span>
             </div>
 
@@ -522,10 +522,10 @@ export default function InfoBar() {
             {/* Horoscope Link */}
             <button
               onClick={handleHoroscopeClick}
-              className="flex items-center gap-2 text-white/70 hover:text-white transition-colors group hidden md:flex"
+              className="flex items-center gap-2 text-white/90 hover:text-white transition-colors group hidden md:flex"
             >
-              <span className="text-xs font-sans tracking-wide">Co dnes říká váš horoskop</span>
-              <span className="text-white/40 group-hover:text-white/80 transition-colors text-xs">→</span>
+              <span className="text-sm font-sans tracking-wide">Co dnes říká váš horoskop</span>
+              <span className="text-white/50 group-hover:text-white/90 transition-colors text-sm">→</span>
             </button>
 
             <span className="w-px h-3.5 bg-white/15 hidden lg:block" />
@@ -533,10 +533,10 @@ export default function InfoBar() {
             {/* Travel Link */}
             <a
               href="/kategorie/cestovani"
-              className="flex items-center gap-2 text-white/70 hover:text-white transition-colors group hidden lg:flex"
+              className="flex items-center gap-2 text-white/90 hover:text-white transition-colors group hidden lg:flex"
             >
-              <span className="text-xs font-sans tracking-wide">Kam letos na dovolenou</span>
-              <span className="text-white/40 group-hover:text-white/80 transition-colors text-xs">→</span>
+              <span className="text-sm font-sans tracking-wide">Kam letos na dovolenou</span>
+              <span className="text-white/50 group-hover:text-white/90 transition-colors text-sm">→</span>
             </a>
 
             <span className="w-px h-3.5 bg-white/15 hidden md:block" />
@@ -546,11 +546,11 @@ export default function InfoBar() {
               {rates.eurCzk !== null ? (
                 <>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] font-sans text-white/60 tracking-wider uppercase">EUR/CZK</span>
+                    <span className="text-xs font-sans text-white/80 tracking-wider uppercase">EUR/CZK</span>
                     <span className="font-mono font-semibold text-white text-[13px] tabular-nums">{rates.eurCzk.toFixed(3)}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <span className="text-[11px] font-sans text-white/60 tracking-wider uppercase">USD/CZK</span>
+                    <span className="text-xs font-sans text-white/80 tracking-wider uppercase">USD/CZK</span>
                     <span className="font-mono font-semibold text-white text-[13px] tabular-nums">{rates.usdCzk?.toFixed(3)}</span>
                   </div>
                 </>
