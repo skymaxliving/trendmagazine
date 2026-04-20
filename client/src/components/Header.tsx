@@ -66,7 +66,7 @@ export default function Header() {
   const weather = useWeather();
 
   return (
-    <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-md border-b border-border">
+    <header className="sticky top-0 z-[60] bg-card/95 backdrop-blur-md border-b border-border">
       {/* Top bar – date & weather */}
       <div className="bg-[#1E293B] text-white/80">
         <div className="container flex items-center justify-between h-8 text-[11px] tracking-wide">

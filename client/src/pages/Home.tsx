@@ -23,12 +23,12 @@ export default function Home() {
   const mobileArticles = articles.filter(a => !a.featured).slice(0, 12);
 
   return (
-    <div className="min-h-screen flex flex-col bg-background">
+    <div className="min-h-screen flex flex-col bg-background overflow-x-hidden">
       <Header />
 
-      <main className="flex-1">
+      <main className="flex-1 overflow-x-hidden">
         {/* Hero Carousel – full-width on mobile, contained on desktop */}
-        <section className="sm:container mt-0 sm:mt-6 mb-4 sm:mb-8">
+        <section className="px-4 sm:px-0 sm:container mt-0 sm:mt-6 mb-4 sm:mb-8 overflow-hidden">
           <HeroCarousel articles={heroArticles} />
         </section>
 

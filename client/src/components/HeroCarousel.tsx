@@ -105,7 +105,7 @@ export default function HeroCarousel({ articles }: HeroCarouselProps) {
   /* ─── Mobile: horizontal scroll snap, no animations ─── */
   if (isMobile) {
     return (
-      <div className="relative -mx-4 sm:mx-0">
+      <div className="relative -mx-4">
         {/* Scrollable container */}
         <div
           ref={scrollRef}
