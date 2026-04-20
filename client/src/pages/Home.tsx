@@ -8,6 +8,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ArticleCard from "@/components/ArticleCard";
 import HeroCarousel from "@/components/HeroCarousel";
+import InfoBar from "@/components/InfoBar";
 import Sidebar from "@/components/Sidebar";
 import AdSlot from "@/components/AdSlot";
 import { articles, categories, getArticlesByCategory } from "@/lib/data";
@@ -31,6 +32,9 @@ export default function Home() {
         <section className="container mt-4 sm:mt-6 mb-4 sm:mb-8 overflow-hidden">
           <HeroCarousel articles={heroArticles} />
         </section>
+
+        {/* Info Bar – name day, horoscope, exchange rates (desktop only) */}
+        <InfoBar />
 
         {/* ===== MOBILE COMPACT LIST (visible only on mobile) ===== */}
         <section className="sm:hidden px-4 mb-6">
