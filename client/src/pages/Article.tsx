@@ -15,6 +15,12 @@ import { getArticleBySlug, formatDate, articles, type Article as ArticleType } f
 import { Clock, ArrowLeft, Share2, Facebook, Twitter, Bookmark, TrendingUp, BarChart3, Globe, Zap } from "lucide-react";
 import { motion, useInView } from "framer-motion";
 
+/* ── YouTube ID extractor ── */
+function extractYouTubeId(url: string): string {
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?#]+)/);
+  return match ? match[1] : "";
+}
+
 /* ── Animated section wrapper ── */
 function AnimatedSection({ children, className = "", delay = 0 }: { children: React.ReactNode; className?: string; delay?: number }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -257,47 +263,88 @@ export default function Article() {
       <Header />
 
       <main className="flex-1">
-        {/* ── HERO IMAGE (full-width, immersive) ── */}
+        {/* ── HERO IMAGE / VIDEO (full-width, immersive) ── */}
         <motion.section
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8 }}
-          className="relative w-full aspect-[16/9] lg:aspect-[21/9] overflow-hidden"
+          className="relative w-full overflow-hidden"
         >
-          <img
-            src={article.image}
-            alt={article.title}
-            className="w-full h-full object-cover"
-            loading="eager"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-          {/* Breadcrumb on image */}
-          <div className="absolute top-6 left-0 right-0 container">
-            <div className="flex items-center gap-2 text-sm text-white/70">
-              <Link href="/" className="hover:text-white transition-colors no-underline flex items-center gap-1">
-                <ArrowLeft className="w-3.5 h-3.5" /> Hlavní stránka
-              </Link>
-              <span>/</span>
-              <Link
-                href={`/kategorie/${article.category.slug}`}
-                className="hover:text-white transition-colors no-underline"
-              >
-                {article.category.name}
-              </Link>
+          {article.videoUrl ? (
+            /* Video article — embedded YouTube player */
+            <div className="relative w-full aspect-[16/9] bg-black">
+              <iframe
+                src={`https://www.youtube.com/embed/${extractYouTubeId(article.videoUrl)}?rel=0&modestbranding=1`}
+                title={article.title}
+                className="absolute inset-0 w-full h-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
             </div>
-          </div>
-          {/* Category + title overlay */}
-          <div className="absolute bottom-0 left-0 right-0 container pb-8 lg:pb-12">
-            <span
-              className="inline-block px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-white rounded-sm mb-5"
-              style={{ backgroundColor: article.category.color }}
-            >
-              {article.category.name}
-            </span>
-            <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-serif font-bold text-white leading-[1.15] max-w-4xl drop-shadow-lg">
-              {article.title}
-            </h1>
-          </div>
+          ) : (
+            /* Standard image hero */
+            <div className="relative w-full aspect-[16/9] lg:aspect-[21/9]">
+              <img
+                src={article.image}
+                alt={article.title}
+                className="w-full h-full object-cover"
+                loading="eager"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+              {/* Breadcrumb on image */}
+              <div className="absolute top-6 left-0 right-0 container">
+                <div className="flex items-center gap-2 text-sm text-white/70">
+                  <Link href="/" className="hover:text-white transition-colors no-underline flex items-center gap-1">
+                    <ArrowLeft className="w-3.5 h-3.5" /> Hlavní stránka
+                  </Link>
+                  <span>/</span>
+                  <Link
+                    href={`/kategorie/${article.category.slug}`}
+                    className="hover:text-white transition-colors no-underline"
+                  >
+                    {article.category.name}
+                  </Link>
+                </div>
+              </div>
+              {/* Category + title overlay */}
+              <div className="absolute bottom-0 left-0 right-0 container pb-8 lg:pb-12">
+                <span
+                  className="inline-block px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-white rounded-sm mb-5"
+                  style={{ backgroundColor: article.category.color }}
+                >
+                  {article.category.name}
+                </span>
+                <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-serif font-bold text-white leading-[1.15] max-w-4xl drop-shadow-lg">
+                  {article.title}
+                </h1>
+              </div>
+            </div>
+          )}
+          {/* Video article — title below video */}
+          {article.videoUrl && (
+            <div className="bg-[#1E293B] py-6">
+              <div className="container">
+                <div className="flex items-center gap-2 text-sm text-white/60 mb-3">
+                  <Link href="/" className="hover:text-white transition-colors no-underline flex items-center gap-1">
+                    <ArrowLeft className="w-3.5 h-3.5" /> Hlavní stránka
+                  </Link>
+                  <span>/</span>
+                  <Link href={`/kategorie/${article.category.slug}`} className="hover:text-white transition-colors no-underline">
+                    {article.category.name}
+                  </Link>
+                </div>
+                <span
+                  className="inline-block px-3 py-1 text-xs font-semibold uppercase tracking-widest text-white rounded-sm mb-3"
+                  style={{ backgroundColor: article.category.color }}
+                >
+                  ▶ Video · {article.category.name}
+                </span>
+                <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-serif font-bold text-white leading-tight max-w-4xl">
+                  {article.title}
+                </h1>
+              </div>
+            </div>
+          )}
         </motion.section>
 
         {/* ── ARTICLE META BAR ── */}

@@ -8,6 +8,7 @@ export interface Article {
   content?: string;
   category: Category;
   image: string;
+  videoUrl?: string; // YouTube or video URL for video articles
   author: string;
   date: string;
   readTime: number;
@@ -448,6 +449,34 @@ export const articles: Article[] = [
     readTime: 5,
     tags: ["klima", "Arktida", "NASA"],
     slug: "arktida-se-otepluje-ctyrykrat-rychleji",
+  },
+  // ─── VIDEO ČLÁNKY ───
+  {
+    id: "v1",
+    title: "Jak Tesla Gigafactory vyrábí 10 000 baterií denně",
+    excerpt: "Exkluzivní video z výrobní linky Tesla Gigafactory v Nevadě. Podívejte se, jak vznikají baterie pro elektromobily budoucnosti.",
+    category: categories[4],
+    image: "https://images.unsplash.com/photo-1611605698335-8b1569810432?w=1600&q=90",
+    videoUrl: "https://www.youtube.com/watch?v=7-4yOx1CnXE",
+    author: "Petr Svoboda",
+    date: "2026-04-19",
+    readTime: 12,
+    tags: ["Tesla", "Gigafactory", "video", "baterie"],
+    slug: "tesla-gigafactory-vyroba-baterii",
+    featured: true,
+  },
+  {
+    id: "v2",
+    title: "Dubai 2026: Město budoucnosti očima dronu",
+    excerpt: "Úchvatné záběry z dronu nad Dubají — nové mrakodrapy, umělé ostrovy a projekty, které mění tvář města.",
+    category: categories[8],
+    image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?w=1600&q=90",
+    videoUrl: "https://www.youtube.com/watch?v=SLaYPmhse30",
+    author: "Redakce TM",
+    date: "2026-04-18",
+    readTime: 8,
+    tags: ["Dubai", "architektura", "video", "dron"],
+    slug: "dubai-2026-mesto-budoucnosti",
   },
 ];
 

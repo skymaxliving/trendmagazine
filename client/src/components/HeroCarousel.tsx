@@ -119,15 +119,21 @@ export default function HeroCarousel({ articles }: HeroCarouselProps) {
               href={`/clanek/${art.slug}`}
               className="snap-center shrink-0 w-full relative no-underline block"
             >
-              <div className="relative aspect-[3/4]">
+              <div className="relative aspect-[16/9]">
                 <img
                   src={art.image}
                   alt={art.title}
                   className="absolute inset-0 w-full h-full object-cover"
                   loading={index === 0 ? "eager" : "lazy"}
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
-                <div className="absolute bottom-0 left-0 right-0 p-4 pb-10">
+                {/* Video play icon overlay */}
+                {art.videoUrl && (
+                  <div className="absolute top-3 right-3 z-10 w-8 h-8 bg-red-600 rounded-full flex items-center justify-center shadow-lg">
+                    <svg className="w-4 h-4 text-white ml-0.5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                  </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
+                <div className="absolute bottom-0 left-0 right-0 px-5 pb-8 pt-4">
                   <span
                     className="inline-block px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-white rounded-sm mb-2"
                     style={{ backgroundColor: art.category.color }}
@@ -197,8 +203,15 @@ export default function HeroCarousel({ articles }: HeroCarouselProps) {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/10" />
 
+            {/* Video play icon overlay */}
+            {article.videoUrl && (
+              <div className="absolute top-6 right-6 z-10 w-14 h-14 bg-red-600 rounded-full flex items-center justify-center shadow-xl hover:bg-red-700 transition-colors">
+                <svg className="w-7 h-7 text-white ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+              </div>
+            )}
+
             <Link href={`/clanek/${article.slug}`} className="no-underline group block absolute inset-0">
-              <div className="absolute bottom-0 left-0 right-0 p-8 pb-10 lg:p-12 lg:pb-12 pr-16 pl-16">
+              <div className="absolute bottom-0 left-0 right-0 p-8 pb-10 lg:p-14 lg:pb-14">
                 <span
                   className="inline-block px-2.5 py-0.5 text-xs font-semibold uppercase tracking-wider text-white rounded-sm mb-3"
                   style={{ backgroundColor: article.category.color }}
