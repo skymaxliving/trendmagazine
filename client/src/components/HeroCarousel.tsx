@@ -183,7 +183,7 @@ export default function HeroCarousel({ articles }: HeroCarouselProps) {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
     >
-      <div className="relative aspect-[16/9] lg:aspect-[21/9]">
+      <div className="relative aspect-[16/9] lg:aspect-[2/1]">
         <AnimatePresence mode="wait" custom={direction}>
           <motion.div
             key={article.id}
