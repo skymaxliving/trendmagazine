@@ -6,8 +6,8 @@
  */
 import { useState, useEffect, useCallback, useRef } from "react";
 import { Link } from "wouter";
-import { type Article, formatDate } from "@/lib/data";
-import { Clock, ChevronLeft, ChevronRight } from "lucide-react";
+import { type Article, formatDateTime } from "@/lib/data";
+import { Clock, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface HeroCarouselProps {
@@ -145,7 +145,9 @@ export default function HeroCarousel({ articles }: HeroCarouselProps) {
                   </h2>
                   <div className="flex items-center gap-3 text-white/60 text-[11px]">
                     <span>{art.author}</span>
-                    <span>{formatDate(art.date)}</span>
+                    <span className="flex items-center gap-1 text-white/80 font-medium">
+                      <Calendar className="w-3 h-3" /> {formatDateTime(art.date)}
+                    </span>
                     <span className="flex items-center gap-1">
                       <Clock className="w-3 h-3" /> {art.readTime} min
                     </span>
@@ -226,7 +228,9 @@ export default function HeroCarousel({ articles }: HeroCarouselProps) {
                 </p>
                 <div className="flex items-center gap-4 text-white/60 text-xs">
                   <span>{article.author}</span>
-                  <span>{formatDate(article.date)}</span>
+                  <span className="flex items-center gap-1.5 text-white/80 font-medium">
+                    <Calendar className="w-3.5 h-3.5" /> {formatDateTime(article.date)}
+                  </span>
                   <span className="flex items-center gap-1">
                     <Clock className="w-3 h-3" /> {article.readTime} min
                   </span>

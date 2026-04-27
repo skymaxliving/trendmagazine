@@ -3,7 +3,7 @@
  * Design: "Steel & Ink" – trending articles, categories, social links, ad slots
  */
 import { Link } from "wouter";
-import { articles, categories, formatDate } from "@/lib/data";
+import { articles, categories, formatDateTime } from "@/lib/data";
 import { TrendingUp, ExternalLink } from "lucide-react";
 import AdSlot from "./AdSlot";
 
@@ -37,8 +37,9 @@ export default function Sidebar() {
                 <h4 className="text-sm font-serif font-bold text-foreground leading-snug group-hover:text-primary transition-colors line-clamp-2">
                   {article.title}
                 </h4>
-                <span className="text-[11px] text-muted-foreground mt-1 block">
-                  {formatDate(article.date)}
+                <span className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1">
+                  <svg className="w-3 h-3 text-primary/50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                  {formatDateTime(article.date)}
                 </span>
               </div>
             </Link>

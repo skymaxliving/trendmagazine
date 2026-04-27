@@ -3,10 +3,11 @@
  * Design: "Steel & Ink" – steel accent bar, serif titles, warm tones
  * Variants: featured (large), standard, compact (sidebar)
  * Supports video articles with play icon overlay
+ * Updated: Prominent date + time display
  */
 import { Link } from "wouter";
-import { type Article, formatDate } from "@/lib/data";
-import { Clock } from "lucide-react";
+import { type Article, formatDateTime, formatTime, hasTime } from "@/lib/data";
+import { Clock, Calendar } from "lucide-react";
 
 interface ArticleCardProps {
   article: Article;
@@ -31,6 +32,40 @@ function VideoPlayBadge({ size = "md" }: { size?: "sm" | "md" | "lg" }) {
         <path d="M8 5v14l11-7z" />
       </svg>
     </div>
+  );
+}
+
+/* Prominent date+time badge for article cards */
+function DateTimeBadge({ dateStr, variant = "light" }: { dateStr: string; variant?: "light" | "dark" | "muted" }) {
+  const time = formatTime(dateStr);
+  const dateTime = formatDateTime(dateStr);
+  
+  if (variant === "dark") {
+    // For hero/overlay cards with dark background
+    return (
+      <span className="flex items-center gap-1.5">
+        <Calendar className="w-3 h-3 text-white/70" />
+        <span className="text-white/80 font-medium">{dateTime}</span>
+      </span>
+    );
+  }
+  
+  if (variant === "muted") {
+    // For compact sidebar cards
+    return (
+      <span className="flex items-center gap-1">
+        <Calendar className="w-3 h-3" />
+        <span>{dateTime}</span>
+      </span>
+    );
+  }
+  
+  // Light variant for standard cards
+  return (
+    <span className="flex items-center gap-1.5">
+      <Calendar className="w-3.5 h-3.5 text-primary/60" />
+      <span className="font-medium text-foreground/70">{dateTime}</span>
+    </span>
   );
 }
 
@@ -64,7 +99,7 @@ export default function ArticleCard({ article, variant = "standard" }: ArticleCa
             </p>
             <div className="flex items-center gap-4 text-white/60 text-xs">
               <span>{article.author}</span>
-              <span>{formatDate(article.date)}</span>
+              <DateTimeBadge dateStr={article.date} variant="dark" />
               <span className="flex items-center gap-1">
                 <Clock className="w-3 h-3" /> {article.readTime} min
               </span>
@@ -101,10 +136,10 @@ export default function ArticleCard({ article, variant = "standard" }: ArticleCa
             <p className="text-muted-foreground text-sm leading-relaxed mb-3 line-clamp-2 hidden sm:block">
               {article.excerpt}
             </p>
-            <div className="flex items-center gap-3 text-muted-foreground text-xs">
-              <span className="font-medium text-foreground/70">{article.author}</span>
-              <span>{formatDate(article.date)}</span>
-              <span className="flex items-center gap-1">
+            <div className="flex items-center gap-3 text-xs">
+              <span className="text-muted-foreground">{article.author}</span>
+              <DateTimeBadge dateStr={article.date} variant="light" />
+              <span className="flex items-center gap-1 text-muted-foreground">
                 <Clock className="w-3 h-3" /> {article.readTime} min
               </span>
             </div>
@@ -124,7 +159,9 @@ export default function ArticleCard({ article, variant = "standard" }: ArticleCa
           <h4 className="text-sm font-serif font-bold text-foreground leading-snug mt-1 group-hover:text-primary transition-colors">
             {article.title}
           </h4>
-          <span className="text-xs text-muted-foreground mt-1 block">{formatDate(article.date)}</span>
+          <span className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+            <DateTimeBadge dateStr={article.date} variant="muted" />
+          </span>
         </article>
       </Link>
     );
@@ -156,11 +193,14 @@ export default function ArticleCard({ article, variant = "standard" }: ArticleCa
           <p className="text-muted-foreground text-sm leading-relaxed line-clamp-2 mb-3">
             {article.excerpt}
           </p>
-          <div className="flex items-center gap-3 text-muted-foreground text-xs">
-            <span>{article.author}</span>
-            <span className="flex items-center gap-1">
-              <Clock className="w-3 h-3" /> {article.readTime} min
-            </span>
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-muted-foreground">{article.author}</span>
+            <div className="flex items-center gap-3">
+              <DateTimeBadge dateStr={article.date} variant="light" />
+              <span className="flex items-center gap-1 text-muted-foreground">
+                <Clock className="w-3 h-3" /> {article.readTime} min
+              </span>
+            </div>
           </div>
         </div>
       </article>

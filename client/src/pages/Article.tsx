@@ -11,8 +11,8 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Sidebar from "@/components/Sidebar";
 import AdSlot from "@/components/AdSlot";
-import { getArticleBySlug, formatDate, articles, type Article as ArticleType } from "@/lib/data";
-import { Clock, ArrowLeft, Share2, Facebook, Twitter, Bookmark, TrendingUp, BarChart3, Globe, Zap } from "lucide-react";
+import { getArticleBySlug, formatDate, formatDateTime, formatTime, hasTime, articles, type Article as ArticleType } from "@/lib/data";
+import { Clock, ArrowLeft, Share2, Facebook, Twitter, Bookmark, TrendingUp, BarChart3, Globe, Zap, Calendar } from "lucide-react";
 import { motion, useInView } from "framer-motion";
 
 /* ── YouTube ID extractor ── */
@@ -357,7 +357,16 @@ export default function Article() {
                 </div>
                 <div>
                   <span className="font-semibold text-foreground block">{article.author}</span>
-                  <span className="text-muted-foreground text-xs">{formatDate(article.date)}</span>
+                </div>
+              </div>
+              <div className="hidden sm:block w-px h-8 bg-border" />
+              <div className="flex items-center gap-2 bg-muted/50 px-3 py-1.5 rounded-sm border border-border/40">
+                <Calendar className="w-4 h-4 text-primary" />
+                <div className="flex flex-col">
+                  <span className="text-sm font-semibold text-foreground leading-tight">{formatDateTime(article.date)}</span>
+                  {hasTime(article.date) && (
+                    <span className="text-[10px] text-muted-foreground leading-tight">čas publikace</span>
+                  )}
                 </div>
               </div>
               <div className="hidden sm:block w-px h-8 bg-border" />

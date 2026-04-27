@@ -180,8 +180,8 @@ export default function Home() {
 /* ===== Mobile Compact Card Component ===== */
 /* Small image left, title + time + author right – like Seznam Zprávy */
 import { Link } from "wouter";
-import { type Article, formatDate } from "@/lib/data";
-import { Clock } from "lucide-react";
+import { type Article, formatDateTime } from "@/lib/data";
+import { Calendar } from "lucide-react";
 
 function MobileCompactCard({ article, index }: { article: Article; index: number }) {
   const isVideo = !!article.videoUrl;
@@ -217,9 +217,9 @@ function MobileCompactCard({ article, index }: { article: Article; index: number
             {article.title}
           </h3>
           <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <Clock className="w-3 h-3" />
-              {formatDate(article.date)}
+            <span className="flex items-center gap-1 font-medium text-foreground/70">
+              <Calendar className="w-3 h-3 text-primary/60" />
+              {formatDateTime(article.date)}
             </span>
             <span className="text-border">·</span>
             <span className="font-medium text-foreground/60 uppercase tracking-wide text-[10px]">

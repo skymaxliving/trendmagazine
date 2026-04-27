@@ -500,3 +500,47 @@ export const formatDate = (dateStr: string): string => {
     year: "numeric",
   });
 };
+
+/**
+ * Returns true if the date string contains a time component (not just a date).
+ * Handles ISO 8601 strings like "2026-04-18T14:30:00Z" or "2026-04-18T14:30:00+02:00"
+ */
+export const hasTime = (dateStr: string): boolean => {
+  return /T\d{2}:\d{2}/.test(dateStr);
+};
+
+/**
+ * Formats date with prominent time display.
+ * If the date string includes a time component, returns "26. dubna 2026, 14:30"
+ * If date-only, returns "26. dubna 2026"
+ */
+export const formatDateTime = (dateStr: string): string => {
+  const date = new Date(dateStr);
+  const datePart = date.toLocaleDateString("cs-CZ", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  if (hasTime(dateStr)) {
+    const timePart = date.toLocaleTimeString("cs-CZ", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+    return `${datePart}, ${timePart}`;
+  }
+  return datePart;
+};
+
+/**
+ * Returns only the time part (e.g. "14:30") if available, otherwise empty string.
+ */
+export const formatTime = (dateStr: string): string => {
+  if (!hasTime(dateStr)) return "";
+  const date = new Date(dateStr);
+  return date.toLocaleTimeString("cs-CZ", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+};
