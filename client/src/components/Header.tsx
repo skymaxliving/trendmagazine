@@ -7,7 +7,7 @@ import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { categories } from "@/lib/data";
 import {
-  Menu, X, Search, ChevronDown,
+  Menu, X, Search, ChevronDown, CalendarDays,
   CloudSun, Cloud, Sun, CloudRain, CloudSnow, CloudLightning, CloudDrizzle, Thermometer,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -54,8 +54,13 @@ function getWeatherLabel(code: number): string {
   return "";
 }
 
-function formatCzechDate(): string {
-  return new Date().toLocaleDateString("cs-CZ", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+function formatCzechDate() {
+  const now = new Date();
+  const weekday = now.toLocaleDateString("cs-CZ", { weekday: "long" });
+  const dayMonth = now.toLocaleDateString("cs-CZ", { day: "numeric", month: "long" });
+  const year = now.getFullYear();
+  const day = now.getDate();
+  return { weekday, dayMonth, year, day };
 }
 
 /* ─── Main Header ─── */
@@ -68,25 +73,43 @@ export default function Header() {
   return (
     <header className="sticky top-0 z-[60] bg-card/95 backdrop-blur-md border-b border-border">
       {/* Top bar – date & weather */}
-      <div className="bg-[#1E293B] text-white/80">
-        <div className="container flex items-center justify-between h-8 text-[11px] tracking-wide">
-          <div className="flex items-center gap-1.5">
-            <span className="uppercase font-medium">{formatCzechDate()}</span>
-          </div>
-          <div className="flex items-center gap-4">
-            {weather && (
-              <div className="flex items-center gap-1.5">
-                {getWeatherIcon(weather.weatherCode)}
-                <span className="font-medium">Praha {weather.temperature}°C</span>
-                <span className="hidden sm:inline text-white/50">·</span>
-                <span className="hidden sm:inline text-white/60">{getWeatherLabel(weather.weatherCode)}</span>
+      {(() => {
+        const d = formatCzechDate();
+        return (
+          <div className="bg-[#1E293B] text-white">
+            <div className="container flex items-center justify-between py-2 sm:py-2.5">
+              {/* Date block with calendar icon */}
+              <div className="flex items-center gap-3">
+                <div className="hidden sm:flex items-center justify-center w-11 h-11 rounded-md bg-white/10 border border-white/15">
+                  <CalendarDays className="w-5 h-5 text-white/90" />
+                </div>
+                <div className="flex sm:hidden items-center justify-center w-9 h-9 rounded-md bg-white/10 border border-white/15">
+                  <CalendarDays className="w-4 h-4 text-white/90" />
+                </div>
+                <div className="flex flex-col leading-tight">
+                  <span className="text-[13px] sm:text-[15px] font-bold tracking-wide text-white uppercase">
+                    {d.weekday} {d.day}. {d.dayMonth.split(" ").slice(1).join(" ")}
+                  </span>
+                  <span className="text-[11px] sm:text-xs text-white/50 font-medium">
+                    {d.year} · Nezávislý český magazín
+                  </span>
+                </div>
               </div>
-            )}
-            <span className="hidden md:inline text-white/40">|</span>
-            <span className="hidden md:inline text-white/60">Nezávislý český magazín</span>
+              {/* Weather */}
+              <div className="flex items-center gap-4">
+                {weather && (
+                  <div className="flex items-center gap-2 bg-white/8 px-3 py-1.5 rounded-md">
+                    {getWeatherIcon(weather.weatherCode)}
+                    <span className="font-semibold text-sm text-white">Praha {weather.temperature}°C</span>
+                    <span className="hidden sm:inline text-white/40">·</span>
+                    <span className="hidden sm:inline text-white/60 text-sm">{getWeatherLabel(weather.weatherCode)}</span>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
+        );
+      })()}
 
       {/* Main header */}
       <div className="container flex items-center justify-between py-3 sm:py-4">

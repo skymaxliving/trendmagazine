@@ -506,7 +506,7 @@ export default function InfoBar() {
   };
 
   return (
-    <div className="hidden sm:block mb-6">
+    <div className="hidden sm:block mb-3">
       <div className="container">
         <div className="bg-[#0F172A] rounded-md overflow-hidden">
           {/* Top row: Name day + Horoscope + Travel + FX rates */}

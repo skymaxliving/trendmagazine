@@ -2,6 +2,7 @@
  * TrendMagazine.cz – Homepage
  * Hero carousel + mobile compact list + featured grid + category sections + sidebar
  * Mobile: compact horizontal cards (image left, text right) like Seznam Zprávy
+ * Now powered by tRPC API with fallback to static data
  */
 import { motion } from "framer-motion";
 import Header from "@/components/Header";
@@ -11,17 +12,18 @@ import HeroCarousel from "@/components/HeroCarousel";
 import InfoBar from "@/components/InfoBar";
 import Sidebar from "@/components/Sidebar";
 import AdSlot from "@/components/AdSlot";
-import { articles, categories, getArticlesByCategory } from "@/lib/data";
+import { useHomepageArticles, useCategories, useCategorySectionArticles } from "@/hooks/useArticles";
+import { type Article, formatDateTime } from "@/lib/data";
 
 export default function Home() {
-  // Top 5 articles for carousel (featured)
-  const heroArticles = articles.filter(a => a.featured).slice(0, 5);
-  // Next 3 non-featured for featured grid (desktop only)
-  const featuredArticles = articles.filter(a => !a.featured).slice(0, 3);
-  // Next batch for latest section
-  const latestArticles = articles.filter(a => !a.featured).slice(3, 9);
-  // All non-hero articles for mobile compact list
-  const mobileArticles = articles.filter(a => !a.featured).slice(0, 12);
+  const {
+    heroArticles,
+    featuredGrid,
+    latestArticles,
+    mobileArticles,
+  } = useHomepageArticles();
+
+  const { categories } = useCategories();
 
   return (
     <div className="min-h-screen flex flex-col bg-background overflow-x-hidden">
@@ -58,27 +60,9 @@ export default function Home() {
           </div>
 
           {/* Mobile category sections */}
-          {categories.slice(0, 6).map((category) => {
-            const catArticles = getArticlesByCategory(category.slug);
-            if (catArticles.length === 0) return null;
-            return (
-              <div key={category.id} className="mt-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <span
-                    className="w-1 h-5 rounded-full"
-                    style={{ backgroundColor: category.color }}
-                  />
-                  <h2 className="text-sm font-bold uppercase tracking-widest text-foreground/80">{category.name}</h2>
-                  <div className="flex-1 h-px bg-border" />
-                </div>
-                <div className="divide-y divide-border/60">
-                  {catArticles.slice(0, 3).map((article, index) => (
-                    <MobileCompactCard key={article.id} article={article} index={index} />
-                  ))}
-                </div>
-              </div>
-            );
-          })}
+          {categories.slice(0, 6).map((category) => (
+            <MobileCategorySection key={category.id} categorySlug={category.slug} category={category} />
+          ))}
         </section>
 
         {/* ===== DESKTOP LAYOUT (hidden on mobile) ===== */}
@@ -96,7 +80,7 @@ export default function Home() {
               transition={{ delay: 0.2, duration: 0.5 }}
               className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
             >
-              {featuredArticles.map((article) => (
+              {featuredGrid.map((article) => (
                 <ArticleCard key={article.id} article={article} variant="standard" />
               ))}
             </motion.div>
@@ -133,27 +117,9 @@ export default function Home() {
                 <AdSlot position="in-article" className="my-8" />
 
                 {/* Category Sections */}
-                {categories.slice(0, 6).map((category) => {
-                  const catArticles = getArticlesByCategory(category.slug);
-                  if (catArticles.length === 0) return null;
-                  return (
-                    <div key={category.id} className="mb-10">
-                      <div className="flex items-center gap-3 mb-5">
-                        <span
-                          className="w-1 h-6 rounded-full"
-                          style={{ backgroundColor: category.color }}
-                        />
-                        <h2 className="text-xl font-serif font-bold text-foreground">{category.name}</h2>
-                        <div className="flex-1 h-px bg-border" />
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-                        {catArticles.slice(0, 2).map((article) => (
-                          <ArticleCard key={article.id} article={article} variant="standard" />
-                        ))}
-                      </div>
-                    </div>
-                  );
-                })}
+                {categories.slice(0, 6).map((category) => (
+                  <DesktopCategorySection key={category.id} categorySlug={category.slug} category={category} />
+                ))}
               </div>
 
               {/* Sidebar */}
@@ -177,10 +143,57 @@ export default function Home() {
   );
 }
 
+/* ===== Category Section Components (fetch per-category articles) ===== */
+
+function DesktopCategorySection({ categorySlug, category }: { categorySlug: string; category: { name: string; color: string } }) {
+  const catArticles = useCategorySectionArticles(categorySlug);
+  if (catArticles.length === 0) return null;
+
+  return (
+    <div className="mb-10">
+      <div className="flex items-center gap-3 mb-5">
+        <span
+          className="w-1 h-6 rounded-full"
+          style={{ backgroundColor: category.color }}
+        />
+        <h2 className="text-xl font-serif font-bold text-foreground">{category.name}</h2>
+        <div className="flex-1 h-px bg-border" />
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
+        {catArticles.slice(0, 2).map((article) => (
+          <ArticleCard key={article.id} article={article} variant="standard" />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function MobileCategorySection({ categorySlug, category }: { categorySlug: string; category: { name: string; color: string } }) {
+  const catArticles = useCategorySectionArticles(categorySlug);
+  if (catArticles.length === 0) return null;
+
+  return (
+    <div className="mt-6">
+      <div className="flex items-center gap-3 mb-4">
+        <span
+          className="w-1 h-5 rounded-full"
+          style={{ backgroundColor: category.color }}
+        />
+        <h2 className="text-sm font-bold uppercase tracking-widest text-foreground/80">{category.name}</h2>
+        <div className="flex-1 h-px bg-border" />
+      </div>
+      <div className="divide-y divide-border/60">
+        {catArticles.slice(0, 3).map((article, index) => (
+          <MobileCompactCard key={article.id} article={article} index={index} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 /* ===== Mobile Compact Card Component ===== */
 /* Small image left, title + time + author right – like Seznam Zprávy */
 import { Link } from "wouter";
-import { type Article, formatDateTime } from "@/lib/data";
 import { Calendar } from "lucide-react";
 
 function MobileCompactCard({ article, index }: { article: Article; index: number }) {

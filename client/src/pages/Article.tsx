@@ -1,18 +1,19 @@
 /*
- * TrendMagazine.cz – Article Detail Page v2.0
+ * TrendMagazine.cz – Article Detail Page v3.0
  * Design: "Steel & Ink" – premium reading experience
- * Features: Large typography, generous spacing, pull-quotes, stat boxes,
- *           scroll animations, Booking.com affiliate, rich content
+ * Uses tRPC hooks with static data fallback
+ * Fixes: HTML content rendering, stat/promo alternation, improved spacing
  */
 import { useParams } from "wouter";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { Link } from "wouter";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import Sidebar from "@/components/Sidebar";
 import AdSlot from "@/components/AdSlot";
-import { getArticleBySlug, formatDate, formatDateTime, formatTime, hasTime, articles, type Article as ArticleType } from "@/lib/data";
-import { Clock, ArrowLeft, Share2, Facebook, Twitter, Bookmark, TrendingUp, BarChart3, Globe, Zap, Calendar } from "lucide-react";
+import { useArticle, useCategoryArticles } from "@/hooks/useArticles";
+import { getArticleBySlug as getStaticArticle, formatDateTime, hasTime, type Article as ArticleType } from "@/lib/data";
+import { Clock, Calendar, ArrowLeft, Share2, Facebook, Twitter, Bookmark, TrendingUp, BarChart3, Globe, Zap, Loader2 } from "lucide-react";
 import { motion, useInView } from "framer-motion";
 
 /* ── YouTube ID extractor ── */
@@ -72,6 +73,33 @@ function PullQuote({ text, author }: { text: string; author?: string }) {
   );
 }
 
+/* ── Skymax Living Promo Box ── */
+function SkymaxPromoBox() {
+  return (
+    <div className="my-12 rounded-sm overflow-hidden">
+      <div className="bg-gradient-to-r from-[#1a1a2e] to-[#16213e] p-8 lg:p-10 border border-white/10">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+          <div className="flex-1">
+            <p className="text-xs font-semibold uppercase tracking-widest text-white/50 mb-2">Partner magazínu</p>
+            <p className="text-xl font-bold text-white mb-2">Skymax Living — Moderní bydlení bez kompromisů</p>
+            <p className="text-white/70 text-base leading-relaxed">
+              Ocelové modulární domy s rychlou výstavbou, nízkou energetickou náročností a designem na míru. Bydlete chytřeji.
+            </p>
+          </div>
+          <a
+            href="https://skymaxliving.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 bg-white hover:bg-white/90 text-[#1a1a2e] font-bold px-8 py-3.5 rounded-sm text-base transition-colors no-underline whitespace-nowrap"
+          >
+            Zjistit více →
+          </a>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── Booking.com Affiliate Box ── */
 function BookingBox() {
   return (
@@ -79,9 +107,10 @@ function BookingBox() {
       <div className="bg-gradient-to-r from-[#003580] to-[#0057b8] p-8 lg:p-10">
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
           <div className="flex-1">
-            <p className="text-xl font-bold text-white mb-2">Zarezervujte si ubytování</p>
+            <p className="text-xs font-semibold uppercase tracking-widest text-white/50 mb-2">Partnerský tip</p>
+            <p className="text-xl font-bold text-white mb-2">Zarezervujte si ubytování na Booking.com</p>
             <p className="text-white/80 text-base leading-relaxed">
-              Najděte nejlepší hotely a apartmány pro vaši cestu na Booking.com. Porovnejte ceny a čtěte recenze od skutečných hostů.
+              Najděte nejlepší hotely a apartmány pro vaši cestu. Porovnejte ceny a čtěte recenze od skutečných hostů.
             </p>
           </div>
           <a
@@ -101,78 +130,60 @@ function BookingBox() {
   );
 }
 
-/* ── Article content generator based on category ── */
-function getArticleContent(article: ArticleType) {
-  const cat = article.category.id;
-
-  // Category-specific stat boxes
-  const statBoxes: Record<string, { stats: { value: string; label: string; icon: React.ReactNode }[] }> = {
-    "svet": {
-      stats: [
-        { value: "195", label: "Zemí ve světě", icon: <Globe className="w-5 h-5" /> },
-        { value: "8,1 mld", label: "Světová populace", icon: <TrendingUp className="w-5 h-5" /> },
-        { value: "24/7", label: "Zpravodajské pokrytí", icon: <Zap className="w-5 h-5" /> },
-      ],
-    },
-    "business": {
-      stats: [
-        { value: "+2,4 %", label: "Růst HDP eurozóny", icon: <TrendingUp className="w-5 h-5" /> },
-        { value: "3,8 %", label: "Míra nezaměstnanosti ČR", icon: <BarChart3 className="w-5 h-5" /> },
-        { value: "25,3", label: "CZK/EUR kurz", icon: <Globe className="w-5 h-5" /> },
-      ],
-    },
-    "akcie": {
-      stats: [
-        { value: "+18,5 %", label: "S&P 500 YTD", icon: <TrendingUp className="w-5 h-5" /> },
-        { value: "5 890", label: "S&P 500 aktuální", icon: <BarChart3 className="w-5 h-5" /> },
-        { value: "$120k", label: "Bitcoin ATH", icon: <Zap className="w-5 h-5" /> },
-      ],
-    },
-    "technologie": {
-      stats: [
-        { value: "$1,8 bil", label: "Globální AI trh 2026", icon: <Zap className="w-5 h-5" /> },
-        { value: "+42 %", label: "Růst AI investic r/r", icon: <TrendingUp className="w-5 h-5" /> },
-        { value: "3,5 mld", label: "Uživatelů AI nástrojů", icon: <Globe className="w-5 h-5" /> },
-      ],
-    },
-    "auta": {
-      stats: [
-        { value: "18,7 mil", label: "Prodaných EV v 2025", icon: <TrendingUp className="w-5 h-5" /> },
-        { value: "23 %", label: "Podíl EV na trhu", icon: <BarChart3 className="w-5 h-5" /> },
-        { value: "680 km", label: "Průměrný dojezd EV", icon: <Zap className="w-5 h-5" /> },
-      ],
-    },
-    "stavebnictvi": {
-      stats: [
-        { value: "+12 %", label: "Růst modulárních staveb", icon: <TrendingUp className="w-5 h-5" /> },
-        { value: "40 %", label: "Úspora času výstavby", icon: <Zap className="w-5 h-5" /> },
-        { value: "30 %", label: "Méně stavebního odpadu", icon: <BarChart3 className="w-5 h-5" /> },
-      ],
-    },
-    "zdravi": {
-      stats: [
-        { value: "150 min", label: "Doporučený pohyb/týden", icon: <TrendingUp className="w-5 h-5" /> },
-        { value: "7–9 h", label: "Optimální délka spánku", icon: <Zap className="w-5 h-5" /> },
-        { value: "2,5 l", label: "Denní příjem tekutin", icon: <BarChart3 className="w-5 h-5" /> },
-      ],
-    },
-    "celebrity": {
-      stats: [
-        { value: "4,9 mld", label: "Uživatelů soc. sítí", icon: <Globe className="w-5 h-5" /> },
-        { value: "$21 mld", label: "Influencer marketing", icon: <TrendingUp className="w-5 h-5" /> },
-        { value: "500 mil", label: "Denních Stories", icon: <Zap className="w-5 h-5" /> },
-      ],
-    },
-    "cestovani": {
-      stats: [
-        { value: "1,5 mld", label: "Mezinár. turistů 2025", icon: <Globe className="w-5 h-5" /> },
-        { value: "+8 %", label: "Růst cestovního ruchu", icon: <TrendingUp className="w-5 h-5" /> },
-        { value: "€145", label: "Prům. cena noci v EU", icon: <BarChart3 className="w-5 h-5" /> },
-      ],
-    },
+/* ── Category-specific stat boxes ── */
+function getStatBoxes(categoryId: string): { value: string; label: string; icon: React.ReactNode }[] {
+  const statBoxes: Record<string, { value: string; label: string; icon: React.ReactNode }[]> = {
+    "svet": [
+      { value: "195", label: "Zemí ve světě", icon: <Globe className="w-5 h-5" /> },
+      { value: "8,1 mld", label: "Světová populace", icon: <TrendingUp className="w-5 h-5" /> },
+      { value: "24/7", label: "Zpravodajské pokrytí", icon: <Zap className="w-5 h-5" /> },
+    ],
+    "business": [
+      { value: "+2,4 %", label: "Růst HDP eurozóny", icon: <TrendingUp className="w-5 h-5" /> },
+      { value: "3,8 %", label: "Míra nezaměstnanosti ČR", icon: <BarChart3 className="w-5 h-5" /> },
+      { value: "25,3", label: "CZK/EUR kurz", icon: <Globe className="w-5 h-5" /> },
+    ],
+    "akcie": [
+      { value: "+18,5 %", label: "S&P 500 YTD", icon: <TrendingUp className="w-5 h-5" /> },
+      { value: "5 890", label: "S&P 500 aktuální", icon: <BarChart3 className="w-5 h-5" /> },
+      { value: "$120k", label: "Bitcoin ATH", icon: <Zap className="w-5 h-5" /> },
+    ],
+    "technologie": [
+      { value: "$1,8 bil", label: "Globální AI trh 2026", icon: <Zap className="w-5 h-5" /> },
+      { value: "+42 %", label: "Růst AI investic r/r", icon: <TrendingUp className="w-5 h-5" /> },
+      { value: "3,5 mld", label: "Uživatelů AI nástrojů", icon: <Globe className="w-5 h-5" /> },
+    ],
+    "auta": [
+      { value: "18,7 mil", label: "Prodaných EV v 2025", icon: <TrendingUp className="w-5 h-5" /> },
+      { value: "23 %", label: "Podíl EV na trhu", icon: <BarChart3 className="w-5 h-5" /> },
+      { value: "680 km", label: "Průměrný dojezd EV", icon: <Zap className="w-5 h-5" /> },
+    ],
+    "stavebnictvi": [
+      { value: "+12 %", label: "Růst modulárních staveb", icon: <TrendingUp className="w-5 h-5" /> },
+      { value: "40 %", label: "Úspora času výstavby", icon: <Zap className="w-5 h-5" /> },
+      { value: "30 %", label: "Méně stavebního odpadu", icon: <BarChart3 className="w-5 h-5" /> },
+    ],
+    "zdravi": [
+      { value: "150 min", label: "Doporučený pohyb/týden", icon: <TrendingUp className="w-5 h-5" /> },
+      { value: "7–9 h", label: "Optimální délka spánku", icon: <Zap className="w-5 h-5" /> },
+      { value: "2,5 l", label: "Denní příjem tekutin", icon: <BarChart3 className="w-5 h-5" /> },
+    ],
+    "celebrity": [
+      { value: "4,9 mld", label: "Uživatelů soc. sítí", icon: <Globe className="w-5 h-5" /> },
+      { value: "$21 mld", label: "Influencer marketing", icon: <TrendingUp className="w-5 h-5" /> },
+      { value: "500 mil", label: "Denních Stories", icon: <Zap className="w-5 h-5" /> },
+    ],
+    "cestovani": [
+      { value: "1,5 mld", label: "Mezinár. turistů 2025", icon: <Globe className="w-5 h-5" /> },
+      { value: "+8 %", label: "Růst cestovního ruchu", icon: <TrendingUp className="w-5 h-5" /> },
+      { value: "€145", label: "Prům. cena noci v EU", icon: <BarChart3 className="w-5 h-5" /> },
+    ],
   };
+  return statBoxes[categoryId] || statBoxes["svet"];
+}
 
-  // Category-specific pull quotes
+/* ── Category-specific pull quotes ── */
+function getPullQuote(categoryId: string): { text: string; author: string } {
   const pullQuotes: Record<string, { text: string; author: string }> = {
     "svet": { text: "Svět se mění rychleji než kdykoli předtím. Klíčem k pochopení budoucnosti je sledovat trendy, které formují přítomnost.", author: "Redakce TrendMagazine" },
     "business": { text: "Úspěšné podnikání v roce 2026 vyžaduje nejen odvahu, ale především schopnost adaptace na neustále se měnící podmínky globální ekonomiky.", author: "Ekonomický analytik" },
@@ -184,14 +195,129 @@ function getArticleContent(article: ArticleType) {
     "celebrity": { text: "Sociální sítě demokratizovaly slávu. Dnes může kdokoli s chytrým telefonem a zajímavým obsahem oslovit miliony lidí po celém světě.", author: "Mediální analytik" },
     "cestovani": { text: "Cestování je jediná investice, která vás obohatí, aniž byste museli cokoli prodat. Každá cesta vám otevře novou perspektivu.", author: "Kateřina Veselá, redaktorka" },
   };
+  return pullQuotes[categoryId] || pullQuotes["svet"];
+}
 
-  return { stats: statBoxes[cat] || statBoxes["svet"], pullQuote: pullQuotes[cat] || pullQuotes["svet"] };
+/* ── Determine which "interstitial" to show: stats vs promo ── */
+function useInterstitialType(articleId: string): "stats" | "skymax" | "booking" {
+  // Deterministic alternation based on article ID hash
+  // This ensures the same article always shows the same type
+  return useMemo(() => {
+    let hash = 0;
+    for (let i = 0; i < articleId.length; i++) {
+      hash = ((hash << 5) - hash) + articleId.charCodeAt(i);
+      hash |= 0;
+    }
+    const mod = Math.abs(hash) % 3;
+    if (mod === 0) return "stats";
+    if (mod === 1) return "skymax";
+    return "booking";
+  }, [articleId]);
+}
+
+/* ── Strip HTML tags helper ── */
+function stripHtmlTags(html: string): string {
+  return html.replace(/<[^>]*>/g, "");
+}
+
+/* ── Sanitize and prepare article HTML content ── */
+function sanitizeContent(raw: string): string {
+  // If content already has HTML tags, return as-is (it's HTML from AI)
+  if (/<[a-z][\s\S]*>/i.test(raw)) {
+    // Ensure paragraphs are wrapped in <p> if they aren't already
+    // Split by double newlines and wrap bare text in <p>
+    const blocks = raw.split(/\n\n+/).filter(b => b.trim().length > 0);
+    return blocks.map(block => {
+      const trimmed = block.trim();
+      // Already wrapped in a block element
+      if (/^<(p|h[1-6]|ul|ol|blockquote|div|table|figure)/i.test(trimmed)) {
+        return trimmed;
+      }
+      // Wrap in paragraph
+      return `<p>${trimmed}</p>`;
+    }).join("\n");
+  }
+
+  // Plain text content — convert to HTML
+  const blocks = raw.split(/\n\n+/).filter(b => b.trim().length > 0);
+  return blocks.map(block => {
+    const trimmed = block.trim();
+    if (trimmed.startsWith("## ")) {
+      return `<h2>${trimmed.slice(3)}</h2>`;
+    }
+    if (trimmed.startsWith("# ")) {
+      return `<h2>${trimmed.slice(2)}</h2>`;
+    }
+    if (trimmed.startsWith("### ")) {
+      return `<h3>${trimmed.slice(4)}</h3>`;
+    }
+    return `<p>${trimmed}</p>`;
+  }).join("\n");
+}
+
+/* ── Render article body content ── */
+function ArticleBody({ article }: { article: ArticleType }) {
+  // If article has real content from DB, render it as HTML
+  if (article.content && article.content.length > 200) {
+    const htmlContent = sanitizeContent(article.content);
+    return (
+      <div
+        className="article-body"
+        dangerouslySetInnerHTML={{ __html: htmlContent }}
+      />
+    );
+  }
+
+  // Fallback: generic content for static/demo articles
+  return (
+    <div className="article-body">
+      <p>
+        Situace na globálních trzích se v posledních měsících výrazně proměnila. Analytici z předních
+        finančních institucí poukazují na několik klíčových faktorů, které formují současný vývoj a které
+        budou mít zásadní dopad na ekonomiku v nadcházejících čtvrtletích.
+      </p>
+      <p>
+        Podle nejnovějších dat se ukazuje, že tempo změn se zrychluje. Firmy, které dokáží rychle reagovat
+        na nové trendy a přizpůsobit své strategie, získávají výraznou konkurenční výhodu.
+      </p>
+      <h2>Hlavní zjištění a analýza</h2>
+      <p>
+        Detailní analýza dostupných dat odhaluje několik překvapivých trendů. Především je to rostoucí
+        význam udržitelnosti a ESG kritérií při rozhodování investorů i spotřebitelů.
+      </p>
+      <p>
+        Dalším významným faktorem je digitalizace. Společnosti, které investovaly do digitální
+        transformace v posledních třech letech, zaznamenaly průměrný nárůst produktivity o 23 %.
+      </p>
+      <h2>Co to znamená pro budoucnost</h2>
+      <p>
+        Experti se shodují, že nadcházející období přinese další zásadní změny. Klíčové bude sledovat
+        vývoj regulatorního prostředí, zejména v oblasti technologií a finančních trhů.
+      </p>
+      <p>
+        Pro české firmy a investory je důležité sledovat nejen globální trendy, ale také specifika
+        středoevropského regionu.
+      </p>
+    </div>
+  );
 }
 
 export default function Article() {
   const { slug } = useParams<{ slug: string }>();
-  const article = getArticleBySlug(slug || "");
+  const { article: dbArticle, isLoading } = useArticle(slug || "");
+  const staticArticle = getStaticArticle(slug || "");
+  const article = dbArticle || staticArticle;
+
   const [progress, setProgress] = useState(0);
+
+  // Get related articles from same category
+  const { articles: categoryArticles } = useCategoryArticles(article?.category?.slug || "");
+  const related = categoryArticles
+    .filter((a) => a.slug !== article?.slug)
+    .slice(0, 3);
+
+  // Determine interstitial type (stats vs skymax vs booking)
+  const interstitialType = useInterstitialType(article?.id || slug || "default");
 
   // Reading progress bar
   useEffect(() => {
@@ -209,6 +335,18 @@ export default function Article() {
     window.scrollTo(0, 0);
   }, [slug]);
 
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Header />
+        <main className="flex-1 container py-16 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
   if (!article) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
@@ -216,7 +354,7 @@ export default function Article() {
         <main className="flex-1 container py-16 text-center">
           <h1 className="text-3xl font-serif font-bold text-foreground mb-4">Článek nenalezen</h1>
           <p className="text-muted-foreground mb-6">Požadovaný článek neexistuje.</p>
-          <Link href="/" className="text-primary hover:underline">Zpět na hlavní stránku</Link>
+          <Link href="/" className="text-primary hover:underline">← Zpět na hlavní stránku</Link>
         </main>
         <Footer />
       </div>
@@ -241,13 +379,9 @@ export default function Article() {
     mainEntityOfPage: { "@type": "WebPage", "@id": `https://trendmagazine.cz/clanek/${article.slug}` },
   };
 
-  // Related articles
-  const related = articles
-    .filter((a) => a.category.id === article.category.id && a.id !== article.id)
-    .slice(0, 3);
-
   // Get category-specific content
-  const { stats, pullQuote } = getArticleContent(article);
+  const stats = getStatBoxes(article.category.id);
+  const pullQuote = getPullQuote(article.category.id);
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -263,16 +397,15 @@ export default function Article() {
       <Header />
 
       <main className="flex-1">
-        {/* ── HERO IMAGE / VIDEO (full-width, immersive) ── */}
+        {/* ── HERO IMAGE / VIDEO ── */}
         <motion.section
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8 }}
-          className="relative w-full overflow-hidden"
+          className="container mt-4 sm:mt-6 overflow-hidden"
         >
           {article.videoUrl ? (
-            /* Video article — embedded YouTube player */
-            <div className="relative w-full aspect-[16/9] bg-black">
+            <div className="relative w-full aspect-[16/9] bg-black rounded-lg overflow-hidden">
               <iframe
                 src={`https://www.youtube.com/embed/${extractYouTubeId(article.videoUrl)}?rel=0&modestbranding=1`}
                 title={article.title}
@@ -282,8 +415,7 @@ export default function Article() {
               />
             </div>
           ) : (
-            /* Standard image hero */
-            <div className="relative w-full aspect-[16/9] lg:aspect-[21/9]">
+            <div className="relative w-full aspect-[16/9] lg:aspect-[21/9] rounded-lg overflow-hidden">
               <img
                 src={article.image}
                 alt={article.title}
@@ -291,7 +423,6 @@ export default function Article() {
                 loading="eager"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-              {/* Breadcrumb on image */}
               <div className="absolute top-6 left-0 right-0 container">
                 <div className="flex items-center gap-2 text-sm text-white/70">
                   <Link href="/" className="hover:text-white transition-colors no-underline flex items-center gap-1">
@@ -306,7 +437,6 @@ export default function Article() {
                   </Link>
                 </div>
               </div>
-              {/* Category + title overlay */}
               <div className="absolute bottom-0 left-0 right-0 container pb-8 lg:pb-12">
                 <span
                   className="inline-block px-4 py-1.5 text-xs font-semibold uppercase tracking-widest text-white rounded-sm mb-5"
@@ -320,7 +450,6 @@ export default function Article() {
               </div>
             </div>
           )}
-          {/* Video article — title below video */}
           {article.videoUrl && (
             <div className="bg-[#1E293B] py-6">
               <div className="container">
@@ -395,39 +524,34 @@ export default function Article() {
         {/* ── ARTICLE BODY + SIDEBAR ── */}
         <section className="container mt-10 lg:mt-14">
           <div className="flex flex-col lg:flex-row gap-10 lg:gap-14">
-            {/* Main content */}
             <div className="lg:w-2/3">
-              {/* Lead paragraph */}
+              {/* Lead paragraph (excerpt) */}
               <AnimatedSection>
                 <p className="text-xl lg:text-2xl text-foreground/90 leading-[1.8] font-serif mb-10">
                   {article.excerpt}
                 </p>
               </AnimatedSection>
 
-              {/* Stat boxes */}
+              {/* Interstitial: stat boxes OR promo (alternates per article) */}
               <AnimatedSection delay={0.1}>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-12">
-                  {stats.stats.map((stat, i) => (
-                    <StatBox key={i} value={stat.value} label={stat.label} icon={stat.icon} />
-                  ))}
-                </div>
+                {interstitialType === "stats" && (
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-12">
+                    {stats.map((stat, i) => (
+                      <StatBox key={i} value={stat.value} label={stat.label} icon={stat.icon} />
+                    ))}
+                  </div>
+                )}
+                {interstitialType === "skymax" && (
+                  <SkymaxPromoBox />
+                )}
+                {interstitialType === "booking" && (
+                  <BookingBox />
+                )}
               </AnimatedSection>
 
-              {/* Body text section 1 */}
+              {/* Article body content — rendered as HTML */}
               <AnimatedSection delay={0.15}>
-                <div className="article-body">
-                  <p>
-                    Situace na globálních trzích se v posledních měsících výrazně proměnila. Analytici z předních
-                    finančních institucí poukazují na několik klíčových faktorů, které formují současný vývoj a které
-                    budou mít zásadní dopad na ekonomiku v nadcházejících čtvrtletích. Mezi nejvýznamnější patří
-                    technologická transformace, geopolitické napětí a měnící se spotřebitelské chování.
-                  </p>
-                  <p>
-                    Podle nejnovějších dat se ukazuje, že tempo změn se zrychluje. Firmy, které dokáží rychle reagovat
-                    na nové trendy a přizpůsobit své strategie, získávají výraznou konkurenční výhodu. Naopak ty,
-                    které setrvávají u tradičních modelů, čelí rostoucímu tlaku ze strany inovativnějších konkurentů.
-                  </p>
-                </div>
+                <ArticleBody article={article} />
               </AnimatedSection>
 
               {/* Pull Quote */}
@@ -435,89 +559,43 @@ export default function Article() {
                 <PullQuote text={pullQuote.text} author={pullQuote.author} />
               </AnimatedSection>
 
-              {/* Body text section 2 */}
+              {/* Secondary promo: show the other type after content */}
               <AnimatedSection delay={0.25}>
-                <div className="article-body">
-                  <h2>Hlavní zjištění a analýza</h2>
-                  <p>
-                    Detailní analýza dostupných dat odhaluje několik překvapivých trendů. Především je to rostoucí
-                    význam udržitelnosti a ESG kritérií při rozhodování investorů i spotřebitelů. Firmy, které
-                    integrují principy udržitelného rozvoje do svého podnikání, vykazují v průměru o 15 % vyšší
-                    návratnost investic ve srovnání s konkurencí.
-                  </p>
-                  <p>
-                    Dalším významným faktorem je digitalizace. Společnosti, které investovaly do digitální
-                    transformace v posledních třech letech, zaznamenaly průměrný nárůst produktivity o 23 %.
-                    Tento trend je patrný napříč všemi sektory — od výroby přes služby až po veřejnou správu.
-                  </p>
-                  <p>
-                    Zvláštní pozornost si zaslouží vývoj v oblasti umělé inteligence. Implementace AI řešení
-                    přináší nejen úspory nákladů, ale především nové obchodní příležitosti. Podle odhadů
-                    poradenské společnosti McKinsey může AI do roku 2030 přidat k globálnímu HDP až 13 bilionů dolarů.
-                  </p>
-                </div>
-              </AnimatedSection>
-
-              {/* Booking.com affiliate for travel articles */}
-              {article.category.id === "cestovani" && (
-                <AnimatedSection delay={0.3}>
-                  <BookingBox />
-                </AnimatedSection>
-              )}
-
-              {/* Body text section 3 */}
-              <AnimatedSection delay={0.3}>
-                <div className="article-body">
-                  <h2>Co to znamená pro budoucnost</h2>
-                  <p>
-                    Experti se shodují, že nadcházející období přinese další zásadní změny. Klíčové bude sledovat
-                    vývoj regulatorního prostředí, zejména v oblasti technologií a finančních trhů. Evropská unie
-                    připravuje řadu nových legislativních opatření, která mohou výrazně ovlivnit podnikatelské
-                    prostředí na celém kontinentu.
-                  </p>
-                  <p>
-                    Pro české firmy a investory je důležité sledovat nejen globální trendy, ale také specifika
-                    středoevropského regionu. Česká republika si udržuje stabilní ekonomický růst a relativně
-                    nízkou nezaměstnanost, což vytváří příznivé podmínky pro podnikání i investice.
-                  </p>
-                </div>
-              </AnimatedSection>
-
-              {/* Highlighted insight box */}
-              <AnimatedSection delay={0.35}>
-                <div className="my-12 p-8 bg-primary/[0.04] border border-primary/10 rounded-sm">
-                  <div className="flex items-start gap-4">
-                    <div className="flex-shrink-0 w-10 h-10 flex items-center justify-center rounded-full bg-primary/10 text-primary mt-1">
-                      <Zap className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-serif font-bold text-foreground mb-2">Klíčový závěr</h3>
-                      <p className="text-foreground/80 leading-relaxed text-base">
-                        Přestože se ekonomické prostředí stává stále komplexnějším, základní principy úspěchu
-                        zůstávají stejné: diverzifikace, dlouhodobé myšlení a schopnost adaptace. Ti, kteří
-                        dokáží tyto principy aplikovat v praxi, budou nejlépe připraveni na výzvy i příležitosti,
-                        které přinese budoucnost.
-                      </p>
-                    </div>
+                {interstitialType === "stats" && (
+                  /* If stats were shown above, show Skymax after content */
+                  <SkymaxPromoBox />
+                )}
+                {interstitialType === "skymax" && (
+                  /* If Skymax was shown above, show Booking after content */
+                  article.category.id === "cestovani" ? <BookingBox /> : null
+                )}
+                {interstitialType === "booking" && (
+                  /* If Booking was shown above, show stats after content */
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-12">
+                    {stats.map((stat, i) => (
+                      <StatBox key={i} value={stat.value} label={stat.label} icon={stat.icon} />
+                    ))}
                   </div>
-                </div>
+                )}
               </AnimatedSection>
 
               {/* Tags */}
-              <AnimatedSection delay={0.4}>
-                <div className="flex flex-wrap gap-2.5 mb-10 pb-10 border-b border-border">
-                  {article.tags.map((tag) => (
-                    <span
-                      key={tag}
-                      className="px-4 py-1.5 text-sm font-medium bg-secondary text-secondary-foreground rounded-sm hover:bg-secondary/80 transition-colors cursor-pointer"
-                    >
-                      #{tag}
-                    </span>
-                  ))}
-                </div>
-              </AnimatedSection>
+              {article.tags && article.tags.length > 0 && (
+                <AnimatedSection delay={0.3}>
+                  <div className="flex flex-wrap gap-2.5 mb-10 pb-10 border-b border-border">
+                    {article.tags.map((tag) => (
+                      <span
+                        key={tag}
+                        className="px-4 py-1.5 text-sm font-medium bg-secondary text-secondary-foreground rounded-sm hover:bg-secondary/80 transition-colors cursor-pointer"
+                      >
+                        #{tag}
+                      </span>
+                    ))}
+                  </div>
+                </AnimatedSection>
+              )}
 
-              {/* In-article ad */}
+              {/* In-article ad slot (for future Google AdSense) */}
               <AdSlot position="in-article" className="my-10" />
 
               {/* Related articles */}
@@ -550,7 +628,9 @@ export default function Article() {
                               <h4 className="text-base font-serif font-bold text-foreground leading-snug group-hover:text-primary transition-colors line-clamp-2 mb-2">
                                 {a.title}
                               </h4>
-                              <span className="text-xs text-muted-foreground">{formatDate(a.date)}</span>
+                              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Calendar className="w-3 h-3" /> {formatDateTime(a.date)}
+                              </span>
                             </div>
                           </article>
                         </Link>

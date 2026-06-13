@@ -22,24 +22,25 @@ export default function AdSlot({ position, className = "" }: AdSlotProps) {
 
   // In production with AdSense approved, this would render actual ad code:
   // <ins className="adsbygoogle" data-ad-client="ca-pub-XXXXX" data-ad-slot="XXXXX" />
-  // For now, render a subtle placeholder that's invisible to users
+  // For now, return null to avoid empty space. Uncomment below when AdSense is ready.
 
+  return null;
+
+  /* When AdSense is approved, replace `return null` with:
   return (
     <div
       className={`mx-auto ${config.className} ${className}`}
       data-ad-position={position}
       aria-hidden="true"
     >
-      {/* Google AdSense code will be inserted here after approval */}
-      {/* 
-        <ins className="adsbygoogle"
-          style={{ display: "block" }}
-          data-ad-client="ca-pub-XXXXXXXXXX"
-          data-ad-slot="XXXXXXXXXX"
-          data-ad-format="auto"
-          data-full-width-responsive="true"
-        />
-      */}
+      <ins className="adsbygoogle"
+        style={{ display: "block" }}
+        data-ad-client="ca-pub-XXXXXXXXXX"
+        data-ad-slot="XXXXXXXXXX"
+        data-ad-format="auto"
+        data-full-width-responsive="true"
+      />
     </div>
   );
+  */
 }

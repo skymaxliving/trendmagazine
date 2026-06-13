@@ -1,21 +1,25 @@
 /*
  * TrendMagazine.cz – Category Page
  * Design: "Steel & Ink" – category filtered view with sidebar
+ * Uses tRPC hooks with static data fallback
  */
 import { useParams } from "wouter";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ArticleCard from "@/components/ArticleCard";
 import Sidebar from "@/components/Sidebar";
-import { getCategoryBySlug, getArticlesByCategory, articles } from "@/lib/data";
+import { useCategoryArticles, useCategories } from "@/hooks/useArticles";
+import { getCategoryBySlug as getStaticCategory } from "@/lib/data";
 import { motion } from "framer-motion";
+import { Loader2 } from "lucide-react";
 
 export default function Category() {
   const { slug } = useParams<{ slug: string }>();
-  const category = getCategoryBySlug(slug || "");
-  const categoryArticles = slug ? getArticlesByCategory(slug) : [];
+  const { categories } = useCategories();
+  const { articles: categoryArticles, isLoading } = useCategoryArticles(slug || "");
 
-  const displayArticles = categoryArticles;
+  // Find category from DB categories or fall back to static
+  const category = categories.find((c) => c.slug === slug) || getStaticCategory(slug || "");
 
   if (!category) {
     return (
@@ -55,22 +59,30 @@ export default function Category() {
         <section className="container mt-8">
           <div className="flex flex-col lg:flex-row gap-8">
             <div className="lg:w-2/3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {displayArticles.map((article, index) => (
-                  <motion.div
-                    key={article.id}
-                    initial={{ opacity: 0, y: 15 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.05 * index, duration: 0.4 }}
-                  >
-                    <ArticleCard article={article} variant="standard" />
-                  </motion.div>
-                ))}
-              </div>
-              {displayArticles.length === 0 && (
-                <p className="text-muted-foreground text-center py-12">
-                  V této kategorii zatím nejsou žádné články.
-                </p>
+              {isLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    {categoryArticles.map((article, index) => (
+                      <motion.div
+                        key={article.id}
+                        initial={{ opacity: 0, y: 15 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.05 * index, duration: 0.4 }}
+                      >
+                        <ArticleCard article={article} variant="standard" />
+                      </motion.div>
+                    ))}
+                  </div>
+                  {categoryArticles.length === 0 && (
+                    <p className="text-muted-foreground text-center py-12">
+                      V této kategorii zatím nejsou žádné články.
+                    </p>
+                  )}
+                </>
               )}
             </div>
             <div className="lg:w-1/3">
