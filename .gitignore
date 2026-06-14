@@ -40,3 +40,4 @@ Thumbs.db
 
 # Manus dev debug logs
 .manus-logs/
+.vercel
