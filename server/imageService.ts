@@ -1,14 +1,11 @@
 /**
- * Image Service for Articles
- * 
- * Strategy:
- * 1. Try Unsplash API (free, real photos, relevant to content)
- * 2. Fall back to AI-generated image via Forge ImageService
- * 3. Last resort: return null (article will use category placeholder)
+ * Image Service for Articles — topical fallback only.
+ *
+ * Primary image is the publisher's original (see server/originalImage.ts).
+ * This module is the fallback when no original is available: it searches
+ * Unsplash by topic. AI generation is intentionally NOT here — that is an
+ * on-demand admin action (see server/imageGen.ts + the admin "replace image").
  */
-import { generateImage } from "./_core/imageGeneration";
-import { ENV } from "./_core/env";
-
 const UNSPLASH_API_URL = "https://api.unsplash.com";
 
 interface UnsplashPhoto {
@@ -72,27 +69,6 @@ async function searchUnsplash(query: string): Promise<string | null> {
 }
 
 /**
- * Generate an AI image for an article
- */
-async function generateAIImage(title: string, excerpt: string): Promise<string | null> {
-  try {
-    const prompt = `Professional editorial news photograph for article: "${title}". ${excerpt.slice(0, 100)}. Photorealistic, high quality, editorial magazine style, no text overlays.`;
-    
-    const result = await generateImage({ prompt });
-    
-    if (result.url) {
-      console.log(`[ImageService] Generated AI image: ${result.url.slice(0, 80)}...`);
-      return result.url;
-    }
-    
-    return null;
-  } catch (error) {
-    console.warn("[ImageService] AI image generation error:", error);
-    return null;
-  }
-}
-
-/**
  * Extract search keywords from article title and tags
  * Converts Czech title to English-friendly search terms
  */
@@ -118,20 +94,8 @@ export async function getArticleImage(article: {
   tags: string;
 }): Promise<string | null> {
   const keywords = extractSearchKeywords(article.title, article.tags);
-  
-  // 1. Try Unsplash
   const unsplashUrl = await searchUnsplash(keywords);
-  if (unsplashUrl) {
-    return unsplashUrl;
-  }
-  
-  // 2. Fall back to AI generation
-  const aiUrl = await generateAIImage(article.title, article.excerpt);
-  if (aiUrl) {
-    return aiUrl;
-  }
-  
-  // 3. No image available
-  console.warn(`[ImageService] No image found for: "${article.title.slice(0, 50)}..."`);
+  if (unsplashUrl) return unsplashUrl;
+  console.warn(`[ImageService] No fallback image for: "${article.title.slice(0, 50)}..."`);
   return null;
 }

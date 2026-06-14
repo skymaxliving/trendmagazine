@@ -37,3 +37,6 @@ android/build/
 
 # OS
 Thumbs.db
+
+# Manus dev debug logs
+.manus-logs/

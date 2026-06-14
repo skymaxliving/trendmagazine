@@ -9,6 +9,7 @@ import { getDb } from "./db";
 import { articles, sources, categories } from "../drizzle/schema";
 import { rewriteArticle } from "./aiPipeline";
 import { getArticleImage } from "./imageService";
+import { imageFromRssItem, fetchOgImage } from "./originalImage";
 import { eq, and, isNotNull } from "drizzle-orm";
 
 // Simple XML parser for RSS feeds (no external dependency needed)
@@ -17,8 +18,9 @@ function parseRSSItems(xml: string): Array<{
   link: string;
   description: string;
   pubDate?: string;
+  rawXml: string;
 }> {
-  const items: Array<{ title: string; link: string; description: string; pubDate?: string }> = [];
+  const items: Array<{ title: string; link: string; description: string; pubDate?: string; rawXml: string }> = [];
   const itemRegex = /<item>([\s\S]*?)<\/item>/gi;
   let match;
 
@@ -35,6 +37,7 @@ function parseRSSItems(xml: string): Array<{
         link: link.trim(),
         description: cleanHtml(description || ""),
         pubDate: pubDate || undefined,
+        rawXml: itemXml,
       });
     }
   }
@@ -93,6 +96,7 @@ async function fetchRSSArticles(source: {
   sourceId: number;
   categoryId: number | null;
   pubDate?: string;
+  image: string | null;
 }>> {
   try {
     console.log(`[Scraper] Fetching RSS from ${source.name}: ${source.rssUrl}`);
@@ -121,6 +125,7 @@ async function fetchRSSArticles(source: {
       sourceId: source.id,
       categoryId: source.categoryId,
       pubDate: item.pubDate,
+      image: imageFromRssItem(item.rawXml),
     }));
   } catch (error) {
     console.error(`[Scraper] Error fetching ${source.name}:`, error);
@@ -258,16 +263,27 @@ export async function runScraper(options?: {
           const slug = generateSlug(rewritten.title);
           const publishedAt = raw.pubDate ? new Date(raw.pubDate) : new Date();
 
-          // Get image for the article (Unsplash → AI fallback)
-          let imageUrl: string | null = null;
-          try {
-            imageUrl = await getArticleImage({
-              title: rewritten.title,
-              excerpt: rewritten.excerpt,
-              tags: rewritten.tags,
-            });
-          } catch (imgErr) {
-            console.warn(`[Scraper] Image fetch failed for: ${rewritten.title.slice(0, 50)}...`, imgErr);
+          // Image strategy: original publisher image first (RSS media → og:image),
+          // then Unsplash topical fallback. No automatic AI generation — that is
+          // an on-demand admin action ("replace image").
+          let imageUrl: string | null = raw.image ?? null;
+          if (!imageUrl) {
+            try {
+              imageUrl = await fetchOgImage(raw.originalUrl);
+            } catch {
+              /* ignore */
+            }
+          }
+          if (!imageUrl) {
+            try {
+              imageUrl = await getArticleImage({
+                title: rewritten.title,
+                excerpt: rewritten.excerpt,
+                tags: rewritten.tags,
+              });
+            } catch (imgErr) {
+              console.warn(`[Scraper] Image fallback failed for: ${rewritten.title.slice(0, 50)}...`, imgErr);
+            }
           }
 
           await saveArticle({

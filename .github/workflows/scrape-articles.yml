@@ -1,0 +1,44 @@
+name: Scrape articles
+
+on:
+  schedule:
+    # Twice a day (07:00 and 19:00 Prague ~ 05:00/17:00 UTC)
+    - cron: "0 5,17 * * *"
+  workflow_dispatch:
+    inputs:
+      maxPerSource:
+        description: "Max nových článků na zdroj"
+        default: "2"
+
+# Avoid overlapping runs
+concurrency:
+  group: scrape
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Run scraper (writes directly to Neon)
+        run: pnpm exec tsx scripts/run-scrape.ts
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_DEFAULT_MODEL: ${{ secrets.ANTHROPIC_DEFAULT_MODEL }}
+          UNSPLASH_ACCESS_KEY: ${{ secrets.UNSPLASH_ACCESS_KEY }}
+          MAX_PER_SOURCE: ${{ github.event.inputs.maxPerSource || '2' }}
+          AUTO_PUBLISH: "true"
