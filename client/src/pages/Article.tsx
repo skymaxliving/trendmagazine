@@ -255,11 +255,54 @@ function sanitizeContent(raw: string): string {
   }).join("\n");
 }
 
+/* Split article HTML into segments with in-article ad breaks between them. */
+function splitForAds(html: string): string[] {
+  const pCount = (html.match(/<\/p>/gi) || []).length;
+  if (pCount < 6) return [html];
+  const adsWanted = pCount >= 10 ? 2 : 1;
+  const interval = Math.floor(pCount / (adsWanted + 1));
+  if (interval < 2) return [html];
+
+  const parts = html.split(/(<\/p>)/i); // keep the </p> delimiters
+  const segments: string[] = [];
+  let cur = "";
+  let p = 0;
+  let breaks = 0;
+  for (const part of parts) {
+    cur += part;
+    if (/<\/p>/i.test(part)) {
+      p++;
+      if (breaks < adsWanted && p % interval === 0 && p < pCount) {
+        segments.push(cur);
+        cur = "";
+        breaks++;
+      }
+    }
+  }
+  if (cur.trim()) segments.push(cur);
+  return segments;
+}
+
 /* ── Render article body content ── */
 function ArticleBody({ article }: { article: ArticleType }) {
   // If article has real content from DB, render it as HTML
   if (article.content && article.content.length > 200) {
     const htmlContent = sanitizeContent(article.content);
+    const segments = splitForAds(htmlContent);
+    if (segments.length > 1) {
+      return (
+        <div className="article-body">
+          {segments.map((seg, i) => (
+            <div key={i}>
+              <div dangerouslySetInnerHTML={{ __html: seg }} />
+              {i < segments.length - 1 && (
+                <AdSlot position="in-article" className="my-8" />
+              )}
+            </div>
+          ))}
+        </div>
+      );
+    }
     return (
       <div
         className="article-body"
