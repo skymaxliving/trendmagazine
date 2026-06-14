@@ -75,10 +75,10 @@ export function useHomepageArticles() {
   };
 }
 
-/** Hook: Get articles by category */
-export function useCategoryArticles(categorySlug: string) {
+/** Hook: Get articles by category (limit grows for "load more" pagination) */
+export function useCategoryArticles(categorySlug: string, limit = 20) {
   const { data: dbArticles, isLoading, error } = trpc.articles.byCategory.useQuery(
-    { categorySlug, limit: 20, offset: 0 },
+    { categorySlug, limit, offset: 0 },
     { retry: 1, staleTime: 60_000 }
   );
 

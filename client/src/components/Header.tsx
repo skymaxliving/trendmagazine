@@ -5,7 +5,7 @@
  */
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { categories } from "@/lib/data";
+import { useCategories } from "@/hooks/useArticles";
 import {
   Menu, X, Search, ChevronDown, CalendarDays,
   CloudSun, Cloud, Sun, CloudRain, CloudSnow, CloudLightning, CloudDrizzle, Thermometer,
@@ -69,6 +69,7 @@ export default function Header() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [location] = useLocation();
   const weather = useWeather();
+  const { categories } = useCategories();
 
   return (
     <header className="sticky top-0 z-[60] bg-card/95 backdrop-blur-md border-b border-border">

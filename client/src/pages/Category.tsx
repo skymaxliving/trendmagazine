@@ -4,6 +4,7 @@
  * Uses tRPC hooks with static data fallback
  */
 import { useParams } from "wouter";
+import { useState, useEffect } from "react";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import ArticleCard from "@/components/ArticleCard";
@@ -13,10 +14,20 @@ import { getCategoryBySlug as getStaticCategory } from "@/lib/data";
 import { motion } from "framer-motion";
 import { Loader2 } from "lucide-react";
 
+const MAX_LIMIT = 50;
+
 export default function Category() {
   const { slug } = useParams<{ slug: string }>();
   const { categories } = useCategories();
-  const { articles: categoryArticles, isLoading } = useCategoryArticles(slug || "");
+  const [limit, setLimit] = useState(12);
+  const { articles: categoryArticles, isLoading } = useCategoryArticles(slug || "", limit);
+
+  // Reset paging when switching category
+  useEffect(() => {
+    setLimit(12);
+  }, [slug]);
+
+  const canLoadMore = categoryArticles.length >= limit && limit < MAX_LIMIT;
 
   // Find category from DB categories or fall back to static
   const category = categories.find((c) => c.slug === slug) || getStaticCategory(slug || "");
@@ -81,6 +92,16 @@ export default function Category() {
                     <p className="text-muted-foreground text-center py-12">
                       V této kategorii zatím nejsou žádné články.
                     </p>
+                  )}
+                  {canLoadMore && (
+                    <div className="flex justify-center mt-8">
+                      <button
+                        onClick={() => setLimit((l) => Math.min(l + 12, MAX_LIMIT))}
+                        className="px-6 py-2.5 rounded-sm border border-border bg-card text-sm font-semibold text-foreground/80 hover:text-primary hover:border-primary/40 transition-colors"
+                      >
+                        Načíst další články
+                      </button>
+                    </div>
                   )}
                 </>
               )}

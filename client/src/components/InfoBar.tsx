@@ -445,25 +445,32 @@ interface StockItem {
   symbol: string;
   price: number;
   changePct: number;
+  isIndex?: boolean;
 }
 
-/* Hardcoded recent market data – refreshed periodically via build/deploy */
+/* Hardcoded recent market data – indicative, refreshed via build/deploy.
+   (BTC above is live via CoinGecko; live indices need a keyed API — later.) */
 const STOCK_DATA: StockItem[] = [
+  { symbol: "S&P 500", price: 6352.4, changePct: 0.42, isIndex: true },
+  { symbol: "NASDAQ", price: 20815.7, changePct: 0.61, isIndex: true },
   { symbol: "AAPL", price: 270.23, changePct: 3.74 },
   { symbol: "TSLA", price: 400.62, changePct: 14.81 },
   { symbol: "GOOGL", price: 341.68, changePct: 7.70 },
   { symbol: "NVDA", price: 201.68, changePct: 6.92 },
 ];
 
-function TickerItem({ symbol, price, changePct }: StockItem) {
+function TickerItem({ symbol, price, changePct, isIndex }: StockItem) {
   const isUp = changePct >= 0;
   const colorClass = isUp ? "text-[#22c55e]" : "text-[#ef4444]";
   const arrow = isUp ? "▲" : "▼";
+  const value = isIndex
+    ? price.toLocaleString("cs-CZ", { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+    : `$${price.toFixed(2)}`;
 
   return (
     <div className="flex items-center gap-1.5 shrink-0">
       <span className="text-[11px] font-sans text-white/50 tracking-wider font-medium">{symbol}</span>
-      <span className="font-mono font-semibold text-white text-[13px] tabular-nums">${price.toFixed(2)}</span>
+      <span className="font-mono font-semibold text-white text-[13px] tabular-nums">{value}</span>
       <span className={`font-mono text-[11px] tabular-nums font-semibold ${colorClass}`}>
         {arrow} {Math.abs(changePct).toFixed(2)}%
       </span>

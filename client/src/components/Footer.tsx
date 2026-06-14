@@ -4,7 +4,7 @@
  * 5 columns: Brand | Kategorie 1 | Kategorie 2 | Informace | Sociální sítě
  */
 import { Link } from "wouter";
-import { categories } from "@/lib/data";
+import { useCategories } from "@/hooks/useArticles";
 
 function SocialIcon({ type }: { type: string }) {
   switch (type) {
@@ -51,9 +51,10 @@ const socialLinks = [
   { type: "youtube", label: "YouTube", href: "#" },
 ];
 
-const midpoint = Math.ceil(categories.length / 2);
-
 export default function Footer() {
+  const { categories } = useCategories();
+  const midpoint = Math.ceil(categories.length / 2);
+
   return (
     <footer className="bg-[#1E293B] text-white/80 mt-16">
       <div className="container py-12">

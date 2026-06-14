@@ -1,14 +1,28 @@
 /*
  * TrendMagazine.cz – Sidebar Component
- * Design: "Steel & Ink" – trending articles, categories, social links, ad slots
+ * Trending (most recent), a tasteful Lifestyle rail (celebrity/models/sport),
+ * categories and social links. Data from the API (tRPC).
  */
 import { Link } from "wouter";
-import { articles, categories, formatDateTime } from "@/lib/data";
-import { TrendingUp, ExternalLink } from "lucide-react";
+import {
+  useCategories,
+  useHomepageArticles,
+  useCategorySectionArticles,
+} from "@/hooks/useArticles";
+import { formatDateTime } from "@/lib/data";
+import { TrendingUp, ExternalLink, Sparkles, ArrowRight } from "lucide-react";
 import AdSlot from "./AdSlot";
 
+const LIFESTYLE = [
+  { slug: "celebrity", label: "Celebrity" },
+  { slug: "modelky", label: "Modelky" },
+  { slug: "sport", label: "Sport" },
+];
+
 export default function Sidebar() {
-  const trending = articles.slice(0, 5);
+  const { categories } = useCategories();
+  const { allArticles } = useHomepageArticles();
+  const trending = allArticles.slice(0, 5);
 
   return (
     <aside className="space-y-8">
@@ -43,6 +57,21 @@ export default function Sidebar() {
                 </span>
               </div>
             </Link>
+          ))}
+        </div>
+      </div>
+
+      {/* Lifestyle rail – decent, but on the eyes (celebrity / models / sport) */}
+      <div className="bg-card border border-border/40 rounded-sm p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Sparkles className="w-4 h-4 text-accent" />
+          <h3 className="text-sm font-semibold uppercase tracking-wider text-foreground">
+            Lifestyle
+          </h3>
+        </div>
+        <div className="space-y-5">
+          {LIFESTYLE.map((c) => (
+            <LifestyleBlock key={c.slug} slug={c.slug} label={c.label} />
           ))}
         </div>
       </div>
@@ -100,5 +129,40 @@ export default function Sidebar() {
         </div>
       </div>
     </aside>
+  );
+}
+
+function LifestyleBlock({ slug, label }: { slug: string; label: string }) {
+  const articles = useCategorySectionArticles(slug);
+  if (!articles.length) return null;
+  const top = articles[0];
+  return (
+    <div>
+      <Link
+        href={`/kategorie/${slug}`}
+        className="flex items-center justify-between mb-2 no-underline group"
+      >
+        <span className="text-xs font-bold uppercase tracking-widest text-foreground/60 group-hover:text-primary transition-colors">
+          {label}
+        </span>
+        <ArrowRight className="w-3.5 h-3.5 text-foreground/40 group-hover:text-primary transition-colors" />
+      </Link>
+      <Link
+        href={`/clanek/${top.slug}`}
+        className="no-underline group flex gap-3 items-start"
+      >
+        <div className="relative w-20 min-w-[5rem] aspect-[4/3] rounded overflow-hidden bg-muted">
+          <img
+            src={top.image}
+            alt={top.title}
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        </div>
+        <h4 className="text-[13px] font-serif font-bold text-foreground leading-snug line-clamp-3 group-hover:text-primary transition-colors">
+          {top.title}
+        </h4>
+      </Link>
+    </div>
   );
 }
