@@ -41,3 +41,7 @@ Thumbs.db
 # Manus dev debug logs
 .manus-logs/
 .vercel
+
+# macOS/iCloud duplicates
+* [0-9].js
+*\ [0-9].*
