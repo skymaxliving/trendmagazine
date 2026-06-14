@@ -11,7 +11,7 @@ function normalizeKey(url: string): string {
 }
 
 const JUNK =
-  /logo|icon|avatar|sprite|pixel|1x1|placeholder|blank|spacer|ad[-_/.]|advert|banner|button|emoji|favicon|gravatar|doubleclick|analytics|tracking|badge|widget|share|social|thumb|/i;
+  /logo|icon|avatar|sprite|pixel|1x1|placeholder|blank|spacer|ad[-_/.]|advert|banner|button|emoji|favicon|gravatar|doubleclick|analytics|tracking|badge|widget|share|social|thumb|default[-_]|\/assets\/|wp-content\/(?:themes|plugins)/i;
 
 /** Reject small images (related-article thumbnails, etc.) by URL size hints. */
 function urlTooSmall(url: string): boolean {
@@ -69,7 +69,7 @@ export async function extractContentImages(
       redirect: "follow",
     });
     if (!res.ok) return [];
-    const html = articleBodyOnly(await res.text());
+    const html = await res.text();
 
     const found: string[] = [];
     const seen = new Set<string>();
