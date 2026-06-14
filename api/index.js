@@ -3,12 +3,263 @@ import "dotenv/config";
 import express from "express";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
 
+// server/adminAuth.ts
+import { SignJWT, jwtVerify } from "jose";
+var COOKIE = "tm_admin";
+var MAX_AGE_MS = 1e3 * 60 * 60 * 24 * 30;
+function secret() {
+  return new TextEncoder().encode(
+    process.env.ADMIN_PASSWORD || "dev-admin-secret-change-me"
+  );
+}
+async function signToken() {
+  return new SignJWT({ role: "admin" }).setProtectedHeader({ alg: "HS256" }).setIssuedAt().setExpirationTime("30d").sign(secret());
+}
+function readCookie(header, name) {
+  if (!header) return null;
+  for (const part of header.split(";")) {
+    const idx = part.indexOf("=");
+    if (idx === -1) continue;
+    if (part.slice(0, idx).trim() === name) {
+      return decodeURIComponent(part.slice(idx + 1).trim());
+    }
+  }
+  return null;
+}
+var ADMIN_USER = {
+  id: 0,
+  openId: "admin",
+  name: "Admin",
+  email: process.env.ADMIN_EMAIL ?? "",
+  loginMethod: "password",
+  role: "admin",
+  createdAt: /* @__PURE__ */ new Date(),
+  updatedAt: /* @__PURE__ */ new Date(),
+  lastSignedIn: /* @__PURE__ */ new Date()
+};
+async function getAdminUser(req) {
+  try {
+    const token = readCookie(req.headers.cookie, COOKIE);
+    if (!token) return null;
+    await jwtVerify(token, secret());
+    return ADMIN_USER;
+  } catch {
+    return null;
+  }
+}
+function registerAdminAuthRoutes(app) {
+  const secureCookie = process.env.NODE_ENV === "production" || !!process.env.VERCEL;
+  app.post("/api/admin/login", async (req, res) => {
+    const password = req.body?.password ?? "";
+    const expected = process.env.ADMIN_PASSWORD ?? "";
+    if (!expected) {
+      res.status(500).json({ ok: false, error: "ADMIN_PASSWORD not configured" });
+      return;
+    }
+    if (password !== expected) {
+      res.status(401).json({ ok: false, error: "\u0160patn\xE9 heslo" });
+      return;
+    }
+    const token = await signToken();
+    res.cookie(COOKIE, token, {
+      httpOnly: true,
+      secure: secureCookie,
+      sameSite: "lax",
+      path: "/",
+      maxAge: MAX_AGE_MS
+    });
+    res.json({ ok: true });
+  });
+  app.post("/api/admin/logout", (_req, res) => {
+    res.clearCookie(COOKIE, { path: "/" });
+    res.json({ ok: true });
+  });
+}
+
+// server/routers.ts
+import { z as z2 } from "zod";
+
 // shared/const.ts
 var COOKIE_NAME = "app_session_id";
 var ONE_YEAR_MS = 1e3 * 60 * 60 * 24 * 365;
-var AXIOS_TIMEOUT_MS = 3e4;
 var UNAUTHED_ERR_MSG = "Please login (10001)";
 var NOT_ADMIN_ERR_MSG = "You do not have required permission (10002)";
+
+// server/_core/cookies.ts
+function isSecureRequest(req) {
+  if (req.protocol === "https") return true;
+  const forwardedProto = req.headers["x-forwarded-proto"];
+  if (!forwardedProto) return false;
+  const protoList = Array.isArray(forwardedProto) ? forwardedProto : forwardedProto.split(",");
+  return protoList.some((proto) => proto.trim().toLowerCase() === "https");
+}
+function getSessionCookieOptions(req) {
+  return {
+    httpOnly: true,
+    path: "/",
+    sameSite: "none",
+    secure: isSecureRequest(req)
+  };
+}
+
+// server/_core/systemRouter.ts
+import { z } from "zod";
+
+// server/_core/notification.ts
+import { TRPCError } from "@trpc/server";
+
+// server/_core/env.ts
+var ENV = {
+  appId: process.env.VITE_APP_ID ?? "",
+  cookieSecret: process.env.JWT_SECRET ?? "",
+  databaseUrl: process.env.DATABASE_URL ?? "",
+  oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
+  ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
+  isProduction: process.env.NODE_ENV === "production",
+  forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
+  forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
+  anthropicModel: process.env.ANTHROPIC_DEFAULT_MODEL ?? "claude-haiku-4-5-20251001"
+};
+
+// server/_core/notification.ts
+var TITLE_MAX_LENGTH = 1200;
+var CONTENT_MAX_LENGTH = 2e4;
+var trimValue = (value) => value.trim();
+var isNonEmptyString = (value) => typeof value === "string" && value.trim().length > 0;
+var buildEndpointUrl = (baseUrl) => {
+  const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+  return new URL(
+    "webdevtoken.v1.WebDevService/SendNotification",
+    normalizedBase
+  ).toString();
+};
+var validatePayload = (input) => {
+  if (!isNonEmptyString(input.title)) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Notification title is required."
+    });
+  }
+  if (!isNonEmptyString(input.content)) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: "Notification content is required."
+    });
+  }
+  const title = trimValue(input.title);
+  const content = trimValue(input.content);
+  if (title.length > TITLE_MAX_LENGTH) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `Notification title must be at most ${TITLE_MAX_LENGTH} characters.`
+    });
+  }
+  if (content.length > CONTENT_MAX_LENGTH) {
+    throw new TRPCError({
+      code: "BAD_REQUEST",
+      message: `Notification content must be at most ${CONTENT_MAX_LENGTH} characters.`
+    });
+  }
+  return { title, content };
+};
+async function notifyOwner(payload) {
+  const { title, content } = validatePayload(payload);
+  if (!ENV.forgeApiUrl) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Notification service URL is not configured."
+    });
+  }
+  if (!ENV.forgeApiKey) {
+    throw new TRPCError({
+      code: "INTERNAL_SERVER_ERROR",
+      message: "Notification service API key is not configured."
+    });
+  }
+  const endpoint = buildEndpointUrl(ENV.forgeApiUrl);
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        accept: "application/json",
+        authorization: `Bearer ${ENV.forgeApiKey}`,
+        "content-type": "application/json",
+        "connect-protocol-version": "1"
+      },
+      body: JSON.stringify({ title, content })
+    });
+    if (!response.ok) {
+      const detail = await response.text().catch(() => "");
+      console.warn(
+        `[Notification] Failed to notify owner (${response.status} ${response.statusText})${detail ? `: ${detail}` : ""}`
+      );
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.warn("[Notification] Error calling notification service:", error);
+    return false;
+  }
+}
+
+// server/_core/trpc.ts
+import { initTRPC, TRPCError as TRPCError2 } from "@trpc/server";
+import superjson from "superjson";
+var t = initTRPC.context().create({
+  transformer: superjson
+});
+var router = t.router;
+var publicProcedure = t.procedure;
+var requireUser = t.middleware(async (opts) => {
+  const { ctx, next } = opts;
+  if (!ctx.user) {
+    throw new TRPCError2({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
+  }
+  return next({
+    ctx: {
+      ...ctx,
+      user: ctx.user
+    }
+  });
+});
+var protectedProcedure = t.procedure.use(requireUser);
+var adminProcedure = t.procedure.use(
+  t.middleware(async (opts) => {
+    const { ctx, next } = opts;
+    if (!ctx.user || ctx.user.role !== "admin") {
+      throw new TRPCError2({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
+    }
+    return next({
+      ctx: {
+        ...ctx,
+        user: ctx.user
+      }
+    });
+  })
+);
+
+// server/_core/systemRouter.ts
+var systemRouter = router({
+  health: publicProcedure.input(
+    z.object({
+      timestamp: z.number().min(0, "timestamp cannot be negative")
+    })
+  ).query(() => ({
+    ok: true
+  })),
+  notifyOwner: adminProcedure.input(
+    z.object({
+      title: z.string().min(1, "title is required"),
+      content: z.string().min(1, "content is required")
+    })
+  ).mutation(async ({ input }) => {
+    const delivered = await notifyOwner(input);
+    return {
+      success: delivered
+    };
+  })
+});
 
 // server/db.ts
 import { eq, desc, and, sql } from "drizzle-orm";
@@ -125,20 +376,6 @@ var articles = pgTable("articles", {
   updatedAt: timestamp("updatedAt").defaultNow().notNull().$onUpdate(() => /* @__PURE__ */ new Date())
 });
 
-// server/_core/env.ts
-var ENV = {
-  appId: process.env.VITE_APP_ID ?? "",
-  cookieSecret: process.env.JWT_SECRET ?? "",
-  databaseUrl: process.env.DATABASE_URL ?? "",
-  oAuthServerUrl: process.env.OAUTH_SERVER_URL ?? "",
-  ownerOpenId: process.env.OWNER_OPEN_ID ?? "",
-  isProduction: process.env.NODE_ENV === "production",
-  forgeApiUrl: process.env.BUILT_IN_FORGE_API_URL ?? "",
-  forgeApiKey: process.env.BUILT_IN_FORGE_API_KEY ?? "",
-  anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
-  anthropicModel: process.env.ANTHROPIC_DEFAULT_MODEL ?? "claude-haiku-4-5-20251001"
-};
-
 // server/db.ts
 var _db = null;
 async function getDb() {
@@ -152,64 +389,6 @@ async function getDb() {
     }
   }
   return _db;
-}
-async function upsertUser(user) {
-  if (!user.openId) {
-    throw new Error("User openId is required for upsert");
-  }
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot upsert user: database not available");
-    return;
-  }
-  try {
-    const values = {
-      openId: user.openId
-    };
-    const updateSet = {};
-    const textFields = ["name", "email", "loginMethod"];
-    const assignNullable = (field) => {
-      const value = user[field];
-      if (value === void 0) return;
-      const normalized = value ?? null;
-      values[field] = normalized;
-      updateSet[field] = normalized;
-    };
-    textFields.forEach(assignNullable);
-    if (user.lastSignedIn !== void 0) {
-      values.lastSignedIn = user.lastSignedIn;
-      updateSet.lastSignedIn = user.lastSignedIn;
-    }
-    if (user.role !== void 0) {
-      values.role = user.role;
-      updateSet.role = user.role;
-    } else if (user.openId === ENV.ownerOpenId) {
-      values.role = "admin";
-      updateSet.role = "admin";
-    }
-    if (!values.lastSignedIn) {
-      values.lastSignedIn = /* @__PURE__ */ new Date();
-    }
-    if (Object.keys(updateSet).length === 0) {
-      updateSet.lastSignedIn = /* @__PURE__ */ new Date();
-    }
-    await db.insert(users).values(values).onConflictDoUpdate({
-      target: users.openId,
-      set: updateSet
-    });
-  } catch (error) {
-    console.error("[Database] Failed to upsert user:", error);
-    throw error;
-  }
-}
-async function getUserByOpenId(openId) {
-  const db = await getDb();
-  if (!db) {
-    console.warn("[Database] Cannot get user: database not available");
-    return void 0;
-  }
-  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
-  return result.length > 0 ? result[0] : void 0;
 }
 async function getAllCategories() {
   const db = await getDb();
@@ -572,437 +751,6 @@ async function deleteSource(sourceId) {
   if (!db) return;
   await db.delete(sources).where(eq(sources.id, sourceId));
 }
-
-// server/_core/cookies.ts
-function isSecureRequest(req) {
-  if (req.protocol === "https") return true;
-  const forwardedProto = req.headers["x-forwarded-proto"];
-  if (!forwardedProto) return false;
-  const protoList = Array.isArray(forwardedProto) ? forwardedProto : forwardedProto.split(",");
-  return protoList.some((proto) => proto.trim().toLowerCase() === "https");
-}
-function getSessionCookieOptions(req) {
-  return {
-    httpOnly: true,
-    path: "/",
-    sameSite: "none",
-    secure: isSecureRequest(req)
-  };
-}
-
-// shared/_core/errors.ts
-var HttpError = class extends Error {
-  constructor(statusCode, message) {
-    super(message);
-    this.statusCode = statusCode;
-    this.name = "HttpError";
-  }
-};
-var ForbiddenError = (msg) => new HttpError(403, msg);
-
-// server/_core/sdk.ts
-import axios from "axios";
-import { parse as parseCookieHeader } from "cookie";
-import { SignJWT, jwtVerify } from "jose";
-var isNonEmptyString = (value) => typeof value === "string" && value.length > 0;
-var EXCHANGE_TOKEN_PATH = `/webdev.v1.WebDevAuthPublicService/ExchangeToken`;
-var GET_USER_INFO_PATH = `/webdev.v1.WebDevAuthPublicService/GetUserInfo`;
-var GET_USER_INFO_WITH_JWT_PATH = `/webdev.v1.WebDevAuthPublicService/GetUserInfoWithJwt`;
-var OAuthService = class {
-  constructor(client) {
-    this.client = client;
-    console.log("[OAuth] Initialized with baseURL:", ENV.oAuthServerUrl);
-    if (!ENV.oAuthServerUrl) {
-      console.error(
-        "[OAuth] ERROR: OAUTH_SERVER_URL is not configured! Set OAUTH_SERVER_URL environment variable."
-      );
-    }
-  }
-  decodeState(state) {
-    const redirectUri = atob(state);
-    return redirectUri;
-  }
-  async getTokenByCode(code, state) {
-    const payload = {
-      clientId: ENV.appId,
-      grantType: "authorization_code",
-      code,
-      redirectUri: this.decodeState(state)
-    };
-    const { data } = await this.client.post(
-      EXCHANGE_TOKEN_PATH,
-      payload
-    );
-    return data;
-  }
-  async getUserInfoByToken(token) {
-    const { data } = await this.client.post(
-      GET_USER_INFO_PATH,
-      {
-        accessToken: token.accessToken
-      }
-    );
-    return data;
-  }
-};
-var createOAuthHttpClient = () => axios.create({
-  baseURL: ENV.oAuthServerUrl,
-  timeout: AXIOS_TIMEOUT_MS
-});
-var SDKServer = class {
-  client;
-  oauthService;
-  constructor(client = createOAuthHttpClient()) {
-    this.client = client;
-    this.oauthService = new OAuthService(this.client);
-  }
-  deriveLoginMethod(platforms, fallback) {
-    if (fallback && fallback.length > 0) return fallback;
-    if (!Array.isArray(platforms) || platforms.length === 0) return null;
-    const set = new Set(
-      platforms.filter((p) => typeof p === "string")
-    );
-    if (set.has("REGISTERED_PLATFORM_EMAIL")) return "email";
-    if (set.has("REGISTERED_PLATFORM_GOOGLE")) return "google";
-    if (set.has("REGISTERED_PLATFORM_APPLE")) return "apple";
-    if (set.has("REGISTERED_PLATFORM_MICROSOFT") || set.has("REGISTERED_PLATFORM_AZURE"))
-      return "microsoft";
-    if (set.has("REGISTERED_PLATFORM_GITHUB")) return "github";
-    const first = Array.from(set)[0];
-    return first ? first.toLowerCase() : null;
-  }
-  /**
-   * Exchange OAuth authorization code for access token
-   * @example
-   * const tokenResponse = await sdk.exchangeCodeForToken(code, state);
-   */
-  async exchangeCodeForToken(code, state) {
-    return this.oauthService.getTokenByCode(code, state);
-  }
-  /**
-   * Get user information using access token
-   * @example
-   * const userInfo = await sdk.getUserInfo(tokenResponse.accessToken);
-   */
-  async getUserInfo(accessToken) {
-    const data = await this.oauthService.getUserInfoByToken({
-      accessToken
-    });
-    const loginMethod = this.deriveLoginMethod(
-      data?.platforms,
-      data?.platform ?? data.platform ?? null
-    );
-    return {
-      ...data,
-      platform: loginMethod,
-      loginMethod
-    };
-  }
-  parseCookies(cookieHeader) {
-    if (!cookieHeader) {
-      return /* @__PURE__ */ new Map();
-    }
-    const parsed = parseCookieHeader(cookieHeader);
-    return new Map(Object.entries(parsed));
-  }
-  getSessionSecret() {
-    const secret = ENV.cookieSecret;
-    return new TextEncoder().encode(secret);
-  }
-  /**
-   * Create a session token for a Manus user openId
-   * @example
-   * const sessionToken = await sdk.createSessionToken(userInfo.openId);
-   */
-  async createSessionToken(openId, options = {}) {
-    return this.signSession(
-      {
-        openId,
-        appId: ENV.appId,
-        name: options.name || ""
-      },
-      options
-    );
-  }
-  async signSession(payload, options = {}) {
-    const issuedAt = Date.now();
-    const expiresInMs = options.expiresInMs ?? ONE_YEAR_MS;
-    const expirationSeconds = Math.floor((issuedAt + expiresInMs) / 1e3);
-    const secretKey = this.getSessionSecret();
-    return new SignJWT({
-      openId: payload.openId,
-      appId: payload.appId,
-      name: payload.name
-    }).setProtectedHeader({ alg: "HS256", typ: "JWT" }).setExpirationTime(expirationSeconds).sign(secretKey);
-  }
-  async verifySession(cookieValue) {
-    if (!cookieValue) {
-      console.warn("[Auth] Missing session cookie");
-      return null;
-    }
-    try {
-      const secretKey = this.getSessionSecret();
-      const { payload } = await jwtVerify(cookieValue, secretKey, {
-        algorithms: ["HS256"]
-      });
-      const { openId, appId, name } = payload;
-      if (!isNonEmptyString(openId) || !isNonEmptyString(appId) || !isNonEmptyString(name)) {
-        console.warn("[Auth] Session payload missing required fields");
-        return null;
-      }
-      return {
-        openId,
-        appId,
-        name
-      };
-    } catch (error) {
-      console.warn("[Auth] Session verification failed", String(error));
-      return null;
-    }
-  }
-  async getUserInfoWithJwt(jwtToken) {
-    const payload = {
-      jwtToken,
-      projectId: ENV.appId
-    };
-    const { data } = await this.client.post(
-      GET_USER_INFO_WITH_JWT_PATH,
-      payload
-    );
-    const loginMethod = this.deriveLoginMethod(
-      data?.platforms,
-      data?.platform ?? data.platform ?? null
-    );
-    return {
-      ...data,
-      platform: loginMethod,
-      loginMethod
-    };
-  }
-  async authenticateRequest(req) {
-    const cookies = this.parseCookies(req.headers.cookie);
-    const sessionCookie = cookies.get(COOKIE_NAME);
-    const session = await this.verifySession(sessionCookie);
-    if (!session) {
-      throw ForbiddenError("Invalid session cookie");
-    }
-    const sessionUserId = session.openId;
-    const signedInAt = /* @__PURE__ */ new Date();
-    let user = await getUserByOpenId(sessionUserId);
-    if (!user) {
-      try {
-        const userInfo = await this.getUserInfoWithJwt(sessionCookie ?? "");
-        await upsertUser({
-          openId: userInfo.openId,
-          name: userInfo.name || null,
-          email: userInfo.email ?? null,
-          loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
-          lastSignedIn: signedInAt
-        });
-        user = await getUserByOpenId(userInfo.openId);
-      } catch (error) {
-        console.error("[Auth] Failed to sync user from OAuth:", error);
-        throw ForbiddenError("Failed to sync user info");
-      }
-    }
-    if (!user) {
-      throw ForbiddenError("User not found");
-    }
-    await upsertUser({
-      openId: user.openId,
-      lastSignedIn: signedInAt
-    });
-    return user;
-  }
-};
-var sdk = new SDKServer();
-
-// server/_core/oauth.ts
-function getQueryParam(req, key) {
-  const value = req.query[key];
-  return typeof value === "string" ? value : void 0;
-}
-function registerOAuthRoutes(app) {
-  app.get("/api/oauth/callback", async (req, res) => {
-    const code = getQueryParam(req, "code");
-    const state = getQueryParam(req, "state");
-    if (!code || !state) {
-      res.status(400).json({ error: "code and state are required" });
-      return;
-    }
-    try {
-      const tokenResponse = await sdk.exchangeCodeForToken(code, state);
-      const userInfo = await sdk.getUserInfo(tokenResponse.accessToken);
-      if (!userInfo.openId) {
-        res.status(400).json({ error: "openId missing from user info" });
-        return;
-      }
-      await upsertUser({
-        openId: userInfo.openId,
-        name: userInfo.name || null,
-        email: userInfo.email ?? null,
-        loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
-        lastSignedIn: /* @__PURE__ */ new Date()
-      });
-      const sessionToken = await sdk.createSessionToken(userInfo.openId, {
-        name: userInfo.name || "",
-        expiresInMs: ONE_YEAR_MS
-      });
-      const cookieOptions = getSessionCookieOptions(req);
-      res.cookie(COOKIE_NAME, sessionToken, { ...cookieOptions, maxAge: ONE_YEAR_MS });
-      res.redirect(302, "/");
-    } catch (error) {
-      console.error("[OAuth] Callback failed", error);
-      res.status(500).json({ error: "OAuth callback failed" });
-    }
-  });
-}
-
-// server/routers.ts
-import { z as z2 } from "zod";
-
-// server/_core/systemRouter.ts
-import { z } from "zod";
-
-// server/_core/notification.ts
-import { TRPCError } from "@trpc/server";
-var TITLE_MAX_LENGTH = 1200;
-var CONTENT_MAX_LENGTH = 2e4;
-var trimValue = (value) => value.trim();
-var isNonEmptyString2 = (value) => typeof value === "string" && value.trim().length > 0;
-var buildEndpointUrl = (baseUrl) => {
-  const normalizedBase = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
-  return new URL(
-    "webdevtoken.v1.WebDevService/SendNotification",
-    normalizedBase
-  ).toString();
-};
-var validatePayload = (input) => {
-  if (!isNonEmptyString2(input.title)) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "Notification title is required."
-    });
-  }
-  if (!isNonEmptyString2(input.content)) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: "Notification content is required."
-    });
-  }
-  const title = trimValue(input.title);
-  const content = trimValue(input.content);
-  if (title.length > TITLE_MAX_LENGTH) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: `Notification title must be at most ${TITLE_MAX_LENGTH} characters.`
-    });
-  }
-  if (content.length > CONTENT_MAX_LENGTH) {
-    throw new TRPCError({
-      code: "BAD_REQUEST",
-      message: `Notification content must be at most ${CONTENT_MAX_LENGTH} characters.`
-    });
-  }
-  return { title, content };
-};
-async function notifyOwner(payload) {
-  const { title, content } = validatePayload(payload);
-  if (!ENV.forgeApiUrl) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Notification service URL is not configured."
-    });
-  }
-  if (!ENV.forgeApiKey) {
-    throw new TRPCError({
-      code: "INTERNAL_SERVER_ERROR",
-      message: "Notification service API key is not configured."
-    });
-  }
-  const endpoint = buildEndpointUrl(ENV.forgeApiUrl);
-  try {
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers: {
-        accept: "application/json",
-        authorization: `Bearer ${ENV.forgeApiKey}`,
-        "content-type": "application/json",
-        "connect-protocol-version": "1"
-      },
-      body: JSON.stringify({ title, content })
-    });
-    if (!response.ok) {
-      const detail = await response.text().catch(() => "");
-      console.warn(
-        `[Notification] Failed to notify owner (${response.status} ${response.statusText})${detail ? `: ${detail}` : ""}`
-      );
-      return false;
-    }
-    return true;
-  } catch (error) {
-    console.warn("[Notification] Error calling notification service:", error);
-    return false;
-  }
-}
-
-// server/_core/trpc.ts
-import { initTRPC, TRPCError as TRPCError2 } from "@trpc/server";
-import superjson from "superjson";
-var t = initTRPC.context().create({
-  transformer: superjson
-});
-var router = t.router;
-var publicProcedure = t.procedure;
-var requireUser = t.middleware(async (opts) => {
-  const { ctx, next } = opts;
-  if (!ctx.user) {
-    throw new TRPCError2({ code: "UNAUTHORIZED", message: UNAUTHED_ERR_MSG });
-  }
-  return next({
-    ctx: {
-      ...ctx,
-      user: ctx.user
-    }
-  });
-});
-var protectedProcedure = t.procedure.use(requireUser);
-var adminProcedure = t.procedure.use(
-  t.middleware(async (opts) => {
-    const { ctx, next } = opts;
-    if (!ctx.user || ctx.user.role !== "admin") {
-      throw new TRPCError2({ code: "FORBIDDEN", message: NOT_ADMIN_ERR_MSG });
-    }
-    return next({
-      ctx: {
-        ...ctx,
-        user: ctx.user
-      }
-    });
-  })
-);
-
-// server/_core/systemRouter.ts
-var systemRouter = router({
-  health: publicProcedure.input(
-    z.object({
-      timestamp: z.number().min(0, "timestamp cannot be negative")
-    })
-  ).query(() => ({
-    ok: true
-  })),
-  notifyOwner: adminProcedure.input(
-    z.object({
-      title: z.string().min(1, "title is required"),
-      content: z.string().min(1, "content is required")
-    })
-  ).mutation(async ({ input }) => {
-    const delivered = await notifyOwner(input);
-    return {
-      success: delivered
-    };
-  })
-});
 
 // server/_core/llm.ts
 import Anthropic from "@anthropic-ai/sdk";
@@ -1387,7 +1135,11 @@ async function runScraper(options) {
     return { total: 0, saved: 0, errors: 0 };
   }
   console.log("[Scraper] Starting scrape run...");
-  const activeSources = await db.select().from(sources).where(and2(eq2(sources.isActive, true), isNotNull(sources.rssUrl)));
+  let activeSources = await db.select().from(sources).where(and2(eq2(sources.isActive, true), isNotNull(sources.rssUrl)));
+  if (options?.onlySourceIds?.length) {
+    const ids = new Set(options.onlySourceIds);
+    activeSources = activeSources.filter((s) => ids.has(s.id));
+  }
   console.log(`[Scraper] Found ${activeSources.length} active RSS sources`);
   let total = 0;
   let saved = 0;
@@ -1470,6 +1222,91 @@ async function runScraper(options) {
   }
   console.log(`[Scraper] Complete: ${total} found, ${saved} saved, ${errors} errors`);
   return { total, saved, errors };
+}
+
+// server/storage.ts
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+var _s3 = null;
+function getS3() {
+  if (!_s3) {
+    _s3 = new S3Client({
+      region: "auto",
+      endpoint: process.env.R2_ENDPOINT,
+      credentials: {
+        accessKeyId: process.env.R2_ACCESS_KEY_ID ?? "",
+        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY ?? ""
+      },
+      forcePathStyle: true
+    });
+  }
+  return _s3;
+}
+function publicBase() {
+  return (process.env.R2_PUBLIC_URL ?? "").replace(/\/+$/, "");
+}
+async function storagePut(relKey, data, contentType = "application/octet-stream") {
+  const bucket = process.env.R2_BUCKET_NAME;
+  if (!bucket) throw new Error("R2_BUCKET_NAME is not configured");
+  if (!publicBase()) throw new Error("R2_PUBLIC_URL is not configured");
+  const key = relKey.replace(/^\/+/, "");
+  const body = typeof data === "string" ? Buffer.from(data) : Buffer.from(data);
+  await getS3().send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: body,
+      ContentType: contentType
+    })
+  );
+  return { key, url: `${publicBase()}/${key}` };
+}
+
+// server/imageGen.ts
+var MODEL = "gemini-2.5-flash-image";
+var ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models";
+function buildPrompt(title, excerpt) {
+  return [
+    `Editorial hero image for a Czech news/magazine article titled: "${title}".`,
+    excerpt ? `Context: ${excerpt.slice(0, 240)}.` : "",
+    "Photorealistic, tasteful editorial magazine style, 16:9 landscape composition.",
+    "Relevant to the topic. No text, no captions, no watermark, no logos, no real identifiable faces."
+  ].filter(Boolean).join(" ");
+}
+async function generateArticleImage(opts) {
+  const apiKey = process.env.GOOGLE_AI_API_KEY;
+  if (!apiKey) throw new Error("GOOGLE_AI_API_KEY is not configured");
+  try {
+    const res = await fetch(`${ENDPOINT}/${MODEL}:generateContent?key=${apiKey}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: buildPrompt(opts.title, opts.excerpt) }] }]
+      }),
+      signal: AbortSignal.timeout(6e4)
+    });
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      console.error(`[imageGen] Gemini ${res.status}: ${detail.slice(0, 200)}`);
+      return null;
+    }
+    const data = await res.json();
+    const parts = data.candidates?.[0]?.content?.parts ?? [];
+    const img = parts.find((p) => p.inlineData?.data);
+    if (!img?.inlineData?.data) {
+      console.error("[imageGen] No image in Gemini response");
+      return null;
+    }
+    const mime = img.inlineData.mimeType || "image/png";
+    const ext = mime.split("/")[1] || "png";
+    const buf = Buffer.from(img.inlineData.data, "base64");
+    const key = `generated/${Date.now()}-${Math.round(Math.random() * 1e6)}.${ext}`;
+    const { url } = await storagePut(key, buf, mime);
+    console.log(`[imageGen] Generated \u2192 ${url}`);
+    return url;
+  } catch (err) {
+    console.error("[imageGen] Error:", err);
+    return null;
+  }
 }
 
 // server/routers.ts
@@ -1645,6 +1482,39 @@ var appRouter = router({
         autoPublish: input?.autoPublish ?? false
       });
       return result;
+    }),
+    /** Replace an article's image: AI-generate (Gemini), search Unsplash, or set a custom URL. */
+    replaceImage: adminProcedure.input(
+      z2.object({
+        articleId: z2.number(),
+        mode: z2.enum(["generate", "unsplash", "url"]),
+        customUrl: z2.string().url().optional()
+      })
+    ).mutation(async ({ input }) => {
+      const article = await getArticleById(input.articleId);
+      if (!article) {
+        return { success: false, error: "\u010Cl\xE1nek nenalezen" };
+      }
+      let image = null;
+      if (input.mode === "url") {
+        image = input.customUrl ?? null;
+      } else if (input.mode === "unsplash") {
+        image = await getArticleImage({
+          title: article.title,
+          excerpt: article.excerpt ?? "",
+          tags: article.tags ?? ""
+        });
+      } else {
+        image = await generateArticleImage({
+          title: article.title,
+          excerpt: article.excerpt ?? ""
+        });
+      }
+      if (!image) {
+        return { success: false, error: "Obr\xE1zek se nepoda\u0159ilo z\xEDskat" };
+      }
+      await updateArticle(input.articleId, { image });
+      return { success: true, image };
     })
   })
 });
@@ -1653,7 +1523,7 @@ var appRouter = router({
 async function createContext(opts) {
   let user = null;
   try {
-    user = await sdk.authenticateRequest(opts.req);
+    user = await getAdminUser(opts.req);
   } catch (error) {
     user = null;
   }
@@ -1664,22 +1534,229 @@ async function createContext(opts) {
   };
 }
 
+// server/seo.ts
+var SITE = (process.env.SITE_URL || "https://trendmagazine.cz").replace(/\/+$/, "");
+var NAME = "TrendMagazine.cz";
+function esc(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+function stripTags(s) {
+  return (s || "").replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+}
+function clip(s, n) {
+  return s.length > n ? `${s.slice(0, n - 1).trimEnd()}\u2026` : s;
+}
+function iso(d) {
+  try {
+    return d ? new Date(d).toISOString() : void 0;
+  } catch {
+    return void 0;
+  }
+}
+function headTags(o) {
+  const t2 = esc(o.title);
+  const d = esc(clip(o.description, 160));
+  const url = esc(o.url);
+  const img = o.image ? esc(o.image) : "";
+  return [
+    `<title>${t2}</title>`,
+    `<meta name="description" content="${d}" />`,
+    `<link rel="canonical" href="${url}" />`,
+    `<meta property="og:type" content="${o.type || "website"}" />`,
+    `<meta property="og:title" content="${t2}" />`,
+    `<meta property="og:description" content="${d}" />`,
+    `<meta property="og:url" content="${url}" />`,
+    `<meta property="og:site_name" content="${NAME}" />`,
+    `<meta property="og:locale" content="cs_CZ" />`,
+    img ? `<meta property="og:image" content="${img}" />` : "",
+    `<meta name="twitter:card" content="summary_large_image" />`,
+    `<meta name="twitter:title" content="${t2}" />`,
+    `<meta name="twitter:description" content="${d}" />`,
+    img ? `<meta name="twitter:image" content="${img}" />` : "",
+    o.publishedTime ? `<meta property="article:published_time" content="${o.publishedTime}" />` : ""
+  ].filter(Boolean).join("\n    ");
+}
+function inject(shell, headHtml, rootHtml) {
+  let html = shell;
+  html = html.replace(/<title>[\s\S]*?<\/title>/i, "");
+  html = html.replace(/<meta\s+name="description"[^>]*>/i, "");
+  html = html.replace(/<meta\s+property="og:[^"]*"[^>]*>/gi, "");
+  html = html.replace(/<meta\s+name="twitter:[^"]*"[^>]*>/gi, "");
+  html = html.replace(/<link\s+rel="canonical"[^>]*>/i, "");
+  html = html.replace(/<\/head>/i, `    ${headHtml}
+  </head>`);
+  if (rootHtml) {
+    html = html.replace('<div id="root"></div>', `<div id="root">${rootHtml}</div>`);
+  }
+  return html;
+}
+function articleJsonLd(a, url) {
+  const obj = {
+    "@context": "https://schema.org",
+    "@type": "NewsArticle",
+    headline: clip(a.title, 110),
+    image: a.image ? [a.image] : void 0,
+    datePublished: iso(a.publishedAt) || iso(a.createdAt),
+    dateModified: iso(a.createdAt) || iso(a.publishedAt),
+    author: { "@type": "Organization", name: a.author || "Redakce TM" },
+    publisher: {
+      "@type": "Organization",
+      name: NAME,
+      logo: { "@type": "ImageObject", url: `${SITE}/favicon.ico` }
+    },
+    description: clip(stripTags(a.excerpt), 200),
+    articleBody: stripTags(a.content),
+    mainEntityOfPage: { "@type": "WebPage", "@id": url },
+    inLanguage: "cs-CZ"
+  };
+  return `<script type="application/ld+json">${JSON.stringify(obj)}</script>`;
+}
+function renderArticle(shell, a) {
+  const url = `${SITE}/clanek/${a.slug}`;
+  const desc2 = stripTags(a.excerpt) || stripTags(a.content) || a.title;
+  const head = headTags({
+    title: `${a.title} | ${NAME}`,
+    description: desc2,
+    url,
+    image: a.image,
+    type: "article",
+    publishedTime: iso(a.publishedAt)
+  }) + "\n    " + articleJsonLd(a, url);
+  const root = `<article><h1>${esc(a.title)}</h1>${a.image ? `<img src="${esc(a.image)}" alt="${esc(a.title)}" />` : ""}${a.excerpt ? `<p>${esc(a.excerpt)}</p>` : ""}${a.content || ""}${a.category ? `<p>Rubrika: <a href="${SITE}/kategorie/${a.category.slug}">${esc(a.category.name)}</a></p>` : ""}</article>`;
+  return inject(shell, head, root);
+}
+function renderCategory(shell, c, articles2) {
+  const url = `${SITE}/kategorie/${c.slug}`;
+  const head = headTags({
+    title: `${c.name} \u2013 aktu\xE1ln\xED zpr\xE1vy | ${NAME}`,
+    description: c.description || `Nejnov\u011Bj\u0161\xED \u010Dl\xE1nky v rubrice ${c.name} na ${NAME}.`,
+    url
+  });
+  const list = articles2.map(
+    (a) => `<li><a href="${SITE}/clanek/${a.slug}">${esc(a.title)}</a>${a.excerpt ? ` \u2013 ${esc(clip(stripTags(a.excerpt), 120))}` : ""}</li>`
+  ).join("");
+  const root = `<section><h1>${esc(c.name)}</h1><p>${esc(c.description || "")}</p><ul>${list}</ul></section>`;
+  return inject(shell, head, root);
+}
+function renderHome(shell, articles2) {
+  const head = headTags({
+    title: `${NAME} \u2013 \u010Cesk\xFD magaz\xEDn: sv\u011Bt, business, technologie, sport`,
+    description: "Aktu\xE1ln\xED zpr\xE1vy a \u010Dl\xE1nky v \u010De\u0161tin\u011B: sv\u011Bt, business, akcie a krypto, AI a technologie, auta, sport, zdrav\xED a celebrity. TrendMagazine.cz.",
+    url: SITE
+  });
+  const list = articles2.slice(0, 30).map((a) => `<li><a href="${SITE}/clanek/${a.slug}">${esc(a.title)}</a></li>`).join("");
+  const root = `<section><h1>${NAME}</h1><p>Aktu\xE1ln\xED zpr\xE1vy a \u010Dl\xE1nky v \u010De\u0161tin\u011B.</p><ul>${list}</ul></section>`;
+  return inject(shell, head, root);
+}
+function buildSitemap(articles2, categories3) {
+  const urls = [];
+  const push = (loc, lastmod, priority) => urls.push(
+    `<url><loc>${esc(loc)}</loc>${lastmod ? `<lastmod>${lastmod}</lastmod>` : ""}${priority ? `<priority>${priority}</priority>` : ""}</url>`
+  );
+  push(SITE, void 0, "1.0");
+  for (const c of categories3) push(`${SITE}/kategorie/${c.slug}`, void 0, "0.7");
+  for (const a of articles2) push(`${SITE}/clanek/${a.slug}`, a.lastmod, "0.8");
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.join(
+    ""
+  )}</urlset>`;
+}
+function robotsTxt() {
+  return `User-agent: *
+Allow: /
+Disallow: /admin
+
+Sitemap: ${SITE}/sitemap.xml
+`;
+}
+
 // server/app.ts
-function createApp() {
+function createApp(opts) {
   const app = express();
   app.use(express.json({ limit: "50mb" }));
   app.use(express.urlencoded({ limit: "50mb", extended: true }));
   app.get("/api/health", (_req, res) => res.json({ ok: true }));
-  registerOAuthRoutes(app);
+  registerAdminAuthRoutes(app);
   app.use(
     "/api/trpc",
     createExpressMiddleware({ router: appRouter, createContext })
   );
+  app.get("/robots.txt", (_req, res) => {
+    res.type("text/plain").send(robotsTxt());
+  });
+  app.get("/sitemap.xml", async (_req, res) => {
+    try {
+      const [articles2, categories3] = await Promise.all([
+        getArticles({ status: "published", limit: 1e3 }),
+        getAllCategories()
+      ]);
+      const xml = buildSitemap(
+        articles2.map((a) => ({
+          slug: a.slug,
+          lastmod: (a.publishedAt ?? a.createdAt)?.toISOString?.()
+        })),
+        categories3.map((c) => ({ slug: c.slug }))
+      );
+      res.setHeader(
+        "Cache-Control",
+        "public, s-maxage=3600, stale-while-revalidate=86400"
+      );
+      res.type("application/xml").send(xml);
+    } catch {
+      res.status(500).send("");
+    }
+  });
+  const shell = opts?.htmlShell;
+  if (shell) {
+    const HTML_CACHE = "public, s-maxage=300, stale-while-revalidate=600";
+    app.get("/clanek/:slug", async (req, res) => {
+      try {
+        const a = await getArticleBySlug(req.params.slug);
+        if (!a) {
+          res.status(404).type("html").send(shell);
+          return;
+        }
+        res.setHeader("Cache-Control", HTML_CACHE);
+        res.type("html").send(renderArticle(shell, a));
+      } catch {
+        res.type("html").send(shell);
+      }
+    });
+    app.get("/kategorie/:slug", async (req, res) => {
+      try {
+        const c = await getCategoryBySlug(req.params.slug);
+        if (!c) {
+          res.status(404).type("html").send(shell);
+          return;
+        }
+        const arts = await getArticlesByCategory(req.params.slug, 30, 0);
+        res.setHeader("Cache-Control", HTML_CACHE);
+        res.type("html").send(renderCategory(shell, c, arts));
+      } catch {
+        res.type("html").send(shell);
+      }
+    });
+    app.get("/", async (_req, res) => {
+      try {
+        const arts = await getArticles({ status: "published", limit: 30 });
+        res.setHeader("Cache-Control", HTML_CACHE);
+        res.type("html").send(renderHome(shell, arts));
+      } catch {
+        res.type("html").send(shell);
+      }
+    });
+    app.get(/^\/(?!api\/).*/, (_req, res) => {
+      res.type("html").send(shell);
+    });
+  }
   return app;
 }
 
+// dist/public/app-shell.html
+var app_shell_default = '<!doctype html>\n<html lang="cs">\n\n  <head>\n    <meta charset="UTF-8" />\n    <meta\n      name="viewport"\n      content="width=device-width, initial-scale=1.0, maximum-scale=1" />\n    <title>TrendMagazine.cz \u2013 V\xE1\u0161 pr\u016Fvodce sv\u011Btem trend\u016F</title>\n    <meta name="description" content="TrendMagazine.cz \u2013 \u010Cesk\xFD online magaz\xEDn o business, technologi\xEDch, ekonomice, zdrav\xED a aktu\xE1ln\xEDm d\u011Bn\xED ve sv\u011Bt\u011B." />\n    <meta name="robots" content="index, follow" />\n    <meta property="og:type" content="website" />\n    <meta property="og:site_name" content="TrendMagazine.cz" />\n    <meta property="og:title" content="TrendMagazine.cz \u2013 V\xE1\u0161 pr\u016Fvodce sv\u011Btem trend\u016F" />\n    <meta property="og:description" content="\u010Cesk\xFD online magaz\xEDn o business, technologi\xEDch, ekonomice, zdrav\xED a aktu\xE1ln\xEDm d\u011Bn\xED ve sv\u011Bt\u011B." />\n    <meta property="og:locale" content="cs_CZ" />\n    <meta name="twitter:card" content="summary_large_image" />\n    <link rel="canonical" href="https://trendmagazine.cz" />\n    <link rel="preconnect" href="https://fonts.googleapis.com" />\n    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />\n    <link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Source+Sans+3:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet" />    <script type="module" crossorigin src="/assets/index-uYrh0Ej5.js"></script>\n    <link rel="stylesheet" crossorigin href="/assets/index-CeAFaTty.css">\n  </head>\n\n  <body>\n    <div id="root"></div>\n  </body>\n\n</html>\n';
+
 // server/serverless.ts
-var serverless_default = createApp();
+var serverless_default = createApp({ htmlShell: app_shell_default });
 export {
   serverless_default as default
 };

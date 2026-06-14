@@ -1,9 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "pnpm vite build && pnpm exec esbuild server/serverless.ts --bundle --platform=node --format=esm --packages=external --outfile=api/index.js",
+  "buildCommand": "pnpm vite build && mv dist/public/index.html dist/public/app-shell.html && pnpm exec esbuild server/serverless.ts --bundle --platform=node --format=esm --packages=external --loader:.html=text --outfile=api/index.js",
   "outputDirectory": "dist/public",
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index" },
-    { "source": "/(.*)", "destination": "/index.html" }
+    { "source": "/(.*)", "destination": "/api/index" }
   ]
 }
