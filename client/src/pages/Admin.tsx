@@ -3,25 +3,80 @@
  * Manage articles, sources, and trigger scraping runs.
  * Only accessible to admin users.
  */
-import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
-import { getLoginUrl } from "@/const";
 import { useState, useEffect } from "react";
 import { Link } from "wouter";
 import {
   Newspaper, RefreshCw, Star, Trash2, Archive, Send,
   FileText, Eye, Clock, AlertCircle, CheckCircle, ChevronLeft,
-  Loader2, Globe, Database, Pencil, Plus, X, Power, Save
+  Loader2, Globe, Database, Pencil, Plus, X, Power, Save, Lock, LogOut
 } from "lucide-react";
 import { toast } from "sonner";
 
+function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      if (res.ok) {
+        onSuccess();
+      } else {
+        toast.error("Špatné heslo");
+      }
+    } catch {
+      toast.error("Chyba přihlášení");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white px-4">
+      <form onSubmit={submit} className="bg-slate-800 border border-slate-700 rounded-xl p-8 w-full max-w-sm">
+        <div className="flex justify-center mb-4"><Lock className="w-10 h-10 text-blue-400" /></div>
+        <h1 className="text-xl font-bold text-center mb-1">TrendMagazine Admin</h1>
+        <p className="text-sm text-slate-400 text-center mb-6">Zadejte heslo pro přístup</p>
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoFocus
+          placeholder="Heslo"
+          className="w-full px-4 py-2 rounded-lg bg-slate-900 border border-slate-700 mb-4 focus:outline-none focus:border-blue-500"
+        />
+        <button
+          type="submit"
+          disabled={loading || !password}
+          className="w-full py-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-50 font-medium transition-colors"
+        >
+          {loading ? "Přihlašuji…" : "Přihlásit"}
+        </button>
+        <Link href="/" className="block text-center text-sm text-slate-400 hover:text-white mt-4">← Zpět na web</Link>
+      </form>
+    </div>
+  );
+}
+
 export default function Admin() {
-  const { user, loading: authLoading } = useAuth();
+  const meQuery = trpc.auth.me.useQuery();
+  const user = meQuery.data;
   const [activeTab, setActiveTab] = useState<"articles" | "sources" | "scraper">("articles");
   const [statusFilter, setStatusFilter] = useState<"published" | "draft" | "archived" | undefined>(undefined);
 
-  // Redirect non-admin users
-  if (authLoading) {
+  const logout = async () => {
+    await fetch("/api/admin/logout", { method: "POST" });
+    meQuery.refetch();
+  };
+
+  if (meQuery.isLoading) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-slate-400" />
@@ -29,22 +84,9 @@ export default function Admin() {
     );
   }
 
-  if (!user) {
-    window.location.href = getLoginUrl();
-    return null;
-  }
-
-  if (user.role !== "admin") {
-    return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">
-        <div className="text-center">
-          <AlertCircle className="w-16 h-16 text-red-400 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold mb-2">Přístup odepřen</h1>
-          <p className="text-slate-400 mb-4">Nemáte oprávnění pro přístup do administrace.</p>
-          <Link href="/" className="text-blue-400 hover:text-blue-300">← Zpět na hlavní stránku</Link>
-        </div>
-      </div>
-    );
+  // Not logged in (or not admin) → show password gate
+  if (!user || user.role !== "admin") {
+    return <AdminLogin onSuccess={() => meQuery.refetch()} />;
   }
 
   return (
@@ -66,6 +108,13 @@ export default function Admin() {
             <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-sm font-bold">
               {(user.name || "A")[0].toUpperCase()}
             </div>
+            <button
+              onClick={logout}
+              title="Odhlásit"
+              className="text-slate-400 hover:text-white transition-colors"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </header>
@@ -163,6 +212,15 @@ function ArticlesPanel({
     },
   });
 
+  const replaceImageMutation = trpc.admin.replaceImage.useMutation({
+    onSuccess: (res) => {
+      utils.admin.articles.invalidate();
+      if (res.success) toast.success("Obrázek nahrazen");
+      else toast.error(res.error || "Nepodařilo se");
+    },
+    onError: () => toast.error("Chyba při nahrazování obrázku"),
+  });
+
   return (
     <div>
       {/* Edit Dialog */}
@@ -245,6 +303,26 @@ function ArticlesPanel({
                   title="Upravit"
                 >
                   <Pencil className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => replaceImageMutation.mutate({ articleId: article.id, mode: "generate" })}
+                  disabled={replaceImageMutation.isPending}
+                  className="p-2 text-purple-400 hover:bg-purple-900/30 rounded transition-colors disabled:opacity-50"
+                  title="Vygenerovat AI obrázek (Gemini)"
+                >
+                  {replaceImageMutation.isPending && replaceImageMutation.variables?.articleId === article.id ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-4 h-4" />
+                  )}
+                </button>
+                <button
+                  onClick={() => replaceImageMutation.mutate({ articleId: article.id, mode: "unsplash" })}
+                  disabled={replaceImageMutation.isPending}
+                  className="p-2 text-teal-400 hover:bg-teal-900/30 rounded transition-colors disabled:opacity-50"
+                  title="Dohledat obrázek na Unsplash"
+                >
+                  <Globe className="w-4 h-4" />
                 </button>
                 {article.status !== "published" && (
                   <button

@@ -8,7 +8,7 @@
 import "dotenv/config";
 import express from "express";
 import { createExpressMiddleware } from "@trpc/server/adapters/express";
-import { registerOAuthRoutes } from "./_core/oauth";
+import { registerAdminAuthRoutes } from "./adminAuth";
 import { appRouter } from "./routers";
 import { createContext } from "./_core/context";
 
@@ -20,8 +20,8 @@ export function createApp() {
   // Health check
   app.get("/api/health", (_req, res) => res.json({ ok: true }));
 
-  // OAuth callback (legacy Manus; to be replaced by Auth.js)
-  registerOAuthRoutes(app);
+  // Simple single-admin password gate
+  registerAdminAuthRoutes(app);
 
   // tRPC API
   app.use(
