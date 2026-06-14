@@ -58,7 +58,8 @@ export async function fetchOgImage(articleUrl: string): Promise<string | null> {
     for (const re of candidates) {
       const m = html.match(re);
       if (m && m[1]) {
-        return absolutize(decodeEntities(m[1].trim()), articleUrl);
+        const candidate = absolutize(decodeEntities(m[1].trim()), articleUrl);
+        if (isImageUrl(candidate)) return candidate;
       }
     }
     return null;
@@ -78,7 +79,16 @@ export async function getOriginalImage(
 }
 
 function isImageUrl(url: string): boolean {
-  return /^https?:\/\//i.test(url);
+  if (!/^https?:\/\//i.test(url)) return false;
+  const u = url.toLowerCase();
+  // Reject video players / embeds (e.g. a video article's og:image may be an
+  // embed link, not a real image) and obvious non-image media.
+  if (
+    /youtube\.com\/(embed|watch)|youtu\.be|vimeo\.com|\/embed\/|player\.|\.mp4(\?|$)|\.m3u8(\?|$)/.test(u)
+  ) {
+    return false;
+  }
+  return true;
 }
 
 function absolutize(url: string, base: string): string {

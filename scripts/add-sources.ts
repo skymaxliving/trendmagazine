@@ -10,7 +10,7 @@ const sql = postgres(DATABASE_URL, { prepare: false });
 
 const newCategories = [
   { slug: "sport", name: "Sport", description: "Basketbal, americký fotbal, baseball a další sport ze zámoří", color: "#1D4ED8", sortOrder: 10 },
-  { slug: "modelky", name: "Modelky", description: "Krása, modelky a lifestyle", color: "#BE185D", sortOrder: 11 },
+  { slug: "beauty", name: "Beauty & Fashion", description: "Krása, móda, modelky a lifestyle", color: "#BE185D", sortOrder: 11 },
 ];
 
 const newSources = [
@@ -21,7 +21,7 @@ const newSources = [
   { name: "Yardbarker NBA", rss: "https://www.yardbarker.com/rss/sport/1", cat: "sport" },
   { name: "Yardbarker MLB", rss: "https://www.yardbarker.com/rss/sport/3", cat: "sport" },
   // Modelky
-  { name: "Maxim", rss: "https://www.maxim.com/feed/", cat: "modelky" },
+  { name: "Maxim", rss: "https://www.maxim.com/feed/", cat: "beauty" },
 ];
 
 console.log("🌱 Kategorie...");

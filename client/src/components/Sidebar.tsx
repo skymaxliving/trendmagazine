@@ -15,7 +15,7 @@ import AdSlot from "./AdSlot";
 
 const LIFESTYLE = [
   { slug: "celebrity", label: "Celebrity" },
-  { slug: "modelky", label: "Modelky" },
+  { slug: "beauty", label: "Beauty & Fashion" },
   { slug: "sport", label: "Sport" },
 ];
 

@@ -20,7 +20,7 @@ import { type Article, type Category, formatDateTime } from "@/lib/data";
 /** Serious core (brand identity) shown as big blocks, in this order. */
 const SERIOUS = ["business", "akcie", "svet", "technologie"];
 /** Lighter, high-click content — present but tasteful ("on the side"). */
-const LIGHT = ["celebrity", "modelky", "sport"];
+const LIGHT = ["celebrity", "beauty", "sport"];
 
 export default function Home() {
   const {
