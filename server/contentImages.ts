@@ -5,14 +5,52 @@
  * Images are embedded directly into the content HTML (crawlable, no schema change).
  */
 import { isImageUrl, absolutize, decodeEntities } from "./originalImage";
-import { searchUnsplashPhotos } from "./imageService";
 
 function normalizeKey(url: string): string {
   return url.split("?")[0].toLowerCase();
 }
 
 const JUNK =
-  /logo|icon|avatar|sprite|pixel|1x1|placeholder|blank|spacer|ad[-_/.]|advert|banner|button|emoji|favicon|gravatar|doubleclick|analytics|tracking|badge|widget|share|social/i;
+  /logo|icon|avatar|sprite|pixel|1x1|placeholder|blank|spacer|ad[-_/.]|advert|banner|button|emoji|favicon|gravatar|doubleclick|analytics|tracking|badge|widget|share|social|thumb|/i;
+
+/** Reject small images (related-article thumbnails, etc.) by URL size hints. */
+function urlTooSmall(url: string): boolean {
+  const w = url.match(/[?&](?:w|width)=(\d+)/i);
+  const h = url.match(/[?&](?:h|height)=(\d+)/i);
+  if (w && parseInt(w[1], 10) < 600) return true;
+  if (h && parseInt(h[1], 10) < 400) return true;
+  // path patterns like -310x237 or /150x150/
+  const dim = url.match(/[-_/](\d{2,4})x(\d{2,4})(?:[-_./]|$)/);
+  if (dim && (parseInt(dim[1], 10) < 500 || parseInt(dim[2], 10) < 320)) return true;
+  return false;
+}
+
+/** Trim the HTML to the article body (drop trailing "related/recommended" widgets). */
+function articleBodyOnly(html: string): string {
+  const lower = html.toLowerCase();
+  const markers = [
+    "you may also",
+    "you might also",
+    "read more from",
+    "more from",
+    "related articles",
+    "related stories",
+    "recommended for you",
+    "most popular",
+    "most read",
+    "up next",
+    "trending now",
+    "newsletter",
+    "sign up",
+    "<footer",
+  ];
+  let cut = html.length;
+  for (const mk of markers) {
+    const i = lower.indexOf(mk);
+    if (i > 3000 && i < cut) cut = i; // only cut well past the article start
+  }
+  return html.slice(0, cut);
+}
 
 /** Extract relevant content images from the original article page. */
 export async function extractContentImages(
@@ -31,7 +69,7 @@ export async function extractContentImages(
       redirect: "follow",
     });
     if (!res.ok) return [];
-    const html = await res.text();
+    const html = articleBodyOnly(await res.text());
 
     const found: string[] = [];
     const seen = new Set<string>();
@@ -50,6 +88,7 @@ export async function extractContentImages(
       if (JUNK.test(low)) continue;
       if (/\.svg(\?|$)/.test(low)) continue;
       if (low.startsWith("data:")) continue;
+      if (urlTooSmall(abs)) continue;
 
       // Size filter via width/height attributes when present
       const w = parseInt((tag.match(/\bwidth=["']?(\d+)/i) || [])[1] || "0", 10);
@@ -98,8 +137,10 @@ export function insertImages(content: string, images: string[]): string {
 }
 
 /**
- * Enrich article content with in-body images: real gallery photos first,
- * then Unsplash fallback. Short articles (<4 paragraphs) are left untouched.
+ * Enrich article content with in-body images — ONLY real photos from the
+ * original article's body (large, not related-article thumbnails). If none
+ * qualify, the article stays text-only (better than irrelevant stock).
+ * Short articles (<4 paragraphs) are left untouched.
  */
 export async function enrichContentWithImages(opts: {
   content: string;
@@ -107,31 +148,11 @@ export async function enrichContentWithImages(opts: {
   heroImage: string | null;
   tags: string | null;
 }): Promise<string> {
-  const { content, originalUrl, heroImage, tags } = opts;
+  const { content, originalUrl, heroImage } = opts;
   const paraCount = (content.match(/<\/p>/gi) || []).length;
   if (paraCount < 4) return content;
 
   const desired = paraCount >= 7 ? 3 : 2;
-
-  let images = await extractContentImages(originalUrl, heroImage, desired);
-
-  if (images.length < desired) {
-    const query =
-      (tags || "")
-        .split(",")
-        .map((t) => t.trim())
-        .filter(Boolean)
-        .slice(0, 2)
-        .join(" ") || "magazine";
-    const extra = await searchUnsplashPhotos(query, desired - images.length);
-    const seen = new Set([heroImage, ...images].filter(Boolean).map((u) => normalizeKey(u as string)));
-    for (const u of extra) {
-      if (!seen.has(normalizeKey(u))) {
-        images.push(u);
-        seen.add(normalizeKey(u));
-      }
-    }
-  }
-
+  const images = await extractContentImages(originalUrl, heroImage, desired);
   return insertImages(content, images.slice(0, desired));
 }

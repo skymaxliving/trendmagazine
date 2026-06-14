@@ -15,6 +15,8 @@ const sql = postgres(DATABASE_URL, { prepare: false });
 
 const limit = process.env.LIMIT ? Number(process.env.LIMIT) : undefined;
 
+// Reprocess ALL articles: strip any existing (possibly bad) figures, then
+// re-insert only strictly-validated real images.
 const rows = await sql<
   { id: number; content: string; image: string | null; originalUrl: string; tags: string | null }[]
 >`
@@ -22,11 +24,13 @@ const rows = await sql<
   WHERE status = 'published'
     AND content IS NOT NULL
     AND "originalUrl" IS NOT NULL
-    AND content NOT ILIKE '%<figure%'
   ORDER BY id
   ${limit ? sql`LIMIT ${limit}` : sql``}
 `;
-console.log(`[backfill-imgs] ${rows.length} článků k obohacení${limit ? ` (limit ${limit})` : ""}...`);
+console.log(`[backfill-imgs] ${rows.length} článků k přegenerování${limit ? ` (limit ${limit})` : ""}...`);
+
+const stripFigures = (html: string) =>
+  html.replace(/<figure[^>]*>[\s\S]*?<\/figure>/gi, "").replace(/\s{3,}/g, " ");
 
 let updated = 0;
 let skipped = 0;
@@ -37,13 +41,14 @@ async function worker() {
   while (idx < rows.length) {
     const r = rows[idx++];
     try {
+      const base = stripFigures(r.content);
       const enriched = await enrichContentWithImages({
-        content: r.content,
+        content: base,
         originalUrl: r.originalUrl,
         heroImage: r.image,
         tags: r.tags,
       });
-      if (enriched !== r.content && enriched.includes("<figure")) {
+      if (enriched !== r.content) {
         await sql`UPDATE articles SET content = ${enriched} WHERE id = ${r.id}`;
         updated++;
       } else {
