@@ -23,6 +23,8 @@ import {
   deleteSource,
 } from "./db";
 import { runScraper } from "./scraper";
+import { generateArticleImage } from "./imageGen";
+import { getArticleImage } from "./imageService";
 
 export const appRouter = router({
   system: systemRouter,
@@ -251,6 +253,45 @@ export const appRouter = router({
           autoPublish: input?.autoPublish ?? false,
         });
         return result;
+      }),
+
+    /** Replace an article's image: AI-generate (Gemini), search Unsplash, or set a custom URL. */
+    replaceImage: adminProcedure
+      .input(
+        z.object({
+          articleId: z.number(),
+          mode: z.enum(["generate", "unsplash", "url"]),
+          customUrl: z.string().url().optional(),
+        })
+      )
+      .mutation(async ({ input }) => {
+        const article = await getArticleById(input.articleId);
+        if (!article) {
+          return { success: false as const, error: "Článek nenalezen" };
+        }
+
+        let image: string | null = null;
+        if (input.mode === "url") {
+          image = input.customUrl ?? null;
+        } else if (input.mode === "unsplash") {
+          image = await getArticleImage({
+            title: article.title,
+            excerpt: article.excerpt ?? "",
+            tags: article.tags ?? "",
+          });
+        } else {
+          image = await generateArticleImage({
+            title: article.title,
+            excerpt: article.excerpt ?? "",
+          });
+        }
+
+        if (!image) {
+          return { success: false as const, error: "Obrázek se nepodařilo získat" };
+        }
+
+        await updateArticle(input.articleId, { image });
+        return { success: true as const, image };
       }),
   }),
 });

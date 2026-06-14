@@ -1,0 +1,51 @@
+{
+  "version": "1.0",
+  "project": "trendmagazine",
+  "description": "Automatizovaný český online magazín — AI přepis a překlad anglických článků (EN→CZ), automatická publikace.",
+  "owner_entity": "skyforce",
+  "domain": "trendmagazine.cz",
+  "platform": "web_only",
+  "target_audience": "b2c_general",
+  "shared_sso": false,
+  "services": {
+    "github": {
+      "org": "skymaxliving",
+      "repo_name": "trendmagazine",
+      "private": true,
+      "default_branch": "main",
+      "include_dev_branch": true
+    },
+    "vercel": {
+      "team_id": "skymaxlivings-projects",
+      "framework": "vite",
+      "production_branch": "main"
+    },
+    "neon": {
+      "project_name": "trendmagazine_prod",
+      "region": "aws-eu-central-1",
+      "compute_size": "0.25"
+    },
+    "cloudflare": {
+      "r2_bucket": "trendmagazine-files",
+      "dns_zone": "trendmagazine.cz",
+      "jurisdiction": "eu"
+    },
+    "anthropic": {
+      "project_key_label": "trendmagazine Production",
+      "default_model": "claude-haiku-4-5-20251001"
+    }
+  },
+  "stack": {
+    "frontend": "vite_react19",
+    "backend": "express_trpc11",
+    "orm": "drizzle",
+    "auth": "authjs_v5",
+    "package_manager": "pnpm",
+    "node_version": "22"
+  },
+  "post_clone_steps": [
+    "pnpm install",
+    "pnpm --filter @trendmagazine/api dev",
+    "pnpm --filter @trendmagazine/web dev"
+  ]
+}
