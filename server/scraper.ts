@@ -200,6 +200,7 @@ async function saveArticle(article: {
 export async function runScraper(options?: {
   maxArticlesPerSource?: number;
   autoPublish?: boolean;
+  onlySourceIds?: number[];
 }): Promise<{ total: number; saved: number; errors: number }> {
   const maxPerSource = options?.maxArticlesPerSource ?? 3;
   const autoPublish = options?.autoPublish ?? false;
@@ -213,10 +214,16 @@ export async function runScraper(options?: {
   console.log("[Scraper] Starting scrape run...");
 
   // Get all active sources with RSS feeds
-  const activeSources = await db
+  let activeSources = await db
     .select()
     .from(sources)
     .where(and(eq(sources.isActive, true), isNotNull(sources.rssUrl)));
+
+  // Optional: limit to specific source IDs (e.g. newly added sources)
+  if (options?.onlySourceIds?.length) {
+    const ids = new Set(options.onlySourceIds);
+    activeSources = activeSources.filter((s) => ids.has(s.id));
+  }
 
   console.log(`[Scraper] Found ${activeSources.length} active RSS sources`);
 
