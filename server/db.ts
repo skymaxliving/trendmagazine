@@ -287,6 +287,80 @@ export async function getArticlesByCategory(
 }
 
 /**
+ * Get published articles that contain a given tag (comma-separated `tags`).
+ */
+export async function getArticlesByTag(
+  tag: string,
+  limit = 20,
+  offset = 0
+): Promise<ArticleWithCategory[]> {
+  const db = await getDb();
+  if (!db) return [];
+
+  // Match the tag as a whole list item: wrap both sides with ", " and compare.
+  const escaped = tag.trim().replace(/[%_\\]/g, "\\$&");
+  const pattern = `%, ${escaped}, %`;
+
+  const rows = await db
+    .select({
+      id: articles.id,
+      slug: articles.slug,
+      title: articles.title,
+      excerpt: articles.excerpt,
+      content: articles.content,
+      image: articles.image,
+      videoUrl: articles.videoUrl,
+      author: articles.author,
+      readTime: articles.readTime,
+      tags: articles.tags,
+      featured: articles.featured,
+      status: articles.status,
+      publishedAt: articles.publishedAt,
+      createdAt: articles.createdAt,
+      categoryId: categories.id,
+      categoryName: categories.name,
+      categorySlug: categories.slug,
+      categoryDescription: categories.description,
+      categoryColor: categories.color,
+    })
+    .from(articles)
+    .innerJoin(categories, eq(articles.categoryId, categories.id))
+    .where(
+      and(
+        eq(articles.status, "published"),
+        sql`(', ' || ${articles.tags} || ', ') ILIKE ${pattern}`
+      )
+    )
+    .orderBy(desc(articles.publishedAt))
+    .limit(limit)
+    .offset(offset);
+
+  return rows.map((row) => ({
+    id: row.id,
+    slug: row.slug,
+    title: row.title,
+    excerpt: row.excerpt,
+    content: row.content,
+    image: row.image,
+    videoUrl: row.videoUrl,
+    author: row.author,
+    readTime: row.readTime,
+    tags: row.tags,
+    featured: row.featured,
+    status: row.status,
+    publishedAt: row.publishedAt,
+    createdAt: row.createdAt,
+    category: {
+      id: row.categorySlug,
+      name: row.categoryName,
+      slug: row.categorySlug,
+      description: row.categoryDescription,
+      color: row.categoryColor,
+    },
+  }));
+}
+
+/**
  * Get a single article by slug with full content
  */
 export async function getArticleBySlug(slug: string): Promise<ArticleWithCategory | null> {

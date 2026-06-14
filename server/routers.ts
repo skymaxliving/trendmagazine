@@ -8,6 +8,7 @@ import {
   getCategoryBySlug,
   getArticles,
   getArticlesByCategory,
+  getArticlesByTag,
   getArticleBySlug,
   getFeaturedArticles,
   getAdminArticles,
@@ -74,6 +75,19 @@ export const appRouter = router({
       )
       .query(async ({ input }) => {
         return getArticlesByCategory(input.categorySlug, input.limit, input.offset);
+      }),
+
+    /** Get articles by tag */
+    byTag: publicProcedure
+      .input(
+        z.object({
+          tag: z.string().min(1),
+          limit: z.number().min(1).max(50).default(20),
+          offset: z.number().min(0).default(0),
+        })
+      )
+      .query(async ({ input }) => {
+        return getArticlesByTag(input.tag, input.limit, input.offset);
       }),
 
     /** Get featured articles for hero carousel */

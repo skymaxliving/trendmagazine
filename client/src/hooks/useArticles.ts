@@ -90,6 +90,18 @@ export function useCategoryArticles(categorySlug: string, limit = 20) {
   return { articles, isLoading, error };
 }
 
+/** Hook: Get articles by tag (limit grows for "load more" pagination) */
+export function useArticlesByTag(tag: string, limit = 20) {
+  const { data: dbArticles, isLoading, error } = trpc.articles.byTag.useQuery(
+    { tag, limit, offset: 0 },
+    { retry: 1, staleTime: 60_000, enabled: !!tag }
+  );
+
+  const articles: Article[] = dbArticles ? dbArticles.map(dbToArticle) : [];
+
+  return { articles, isLoading, error };
+}
+
 /** Hook: Get all categories */
 export function useCategories() {
   const { data: dbCategories, isLoading } = trpc.categories.list.useQuery(

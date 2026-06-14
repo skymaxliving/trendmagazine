@@ -584,12 +584,13 @@ export default function Article() {
                 <AnimatedSection delay={0.3}>
                   <div className="flex flex-wrap gap-2.5 mb-10 pb-10 border-b border-border">
                     {article.tags.map((tag) => (
-                      <span
+                      <Link
                         key={tag}
-                        className="px-4 py-1.5 text-sm font-medium bg-secondary text-secondary-foreground rounded-sm hover:bg-secondary/80 transition-colors cursor-pointer"
+                        href={`/tag/${encodeURIComponent(tag)}`}
+                        className="px-4 py-1.5 text-sm font-medium bg-secondary text-secondary-foreground rounded-sm hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer no-underline"
                       >
                         #{tag}
-                      </span>
+                      </Link>
                     ))}
                   </div>
                 </AnimatedSection>
