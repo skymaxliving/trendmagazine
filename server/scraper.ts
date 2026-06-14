@@ -10,6 +10,7 @@ import { articles, sources, categories } from "../drizzle/schema";
 import { rewriteArticle } from "./aiPipeline";
 import { getArticleImage } from "./imageService";
 import { imageFromRssItem, fetchOgImage } from "./originalImage";
+import { enrichContentWithImages } from "./contentImages";
 import { eq, and, isNotNull } from "drizzle-orm";
 
 // Simple XML parser for RSS feeds (no external dependency needed)
@@ -293,11 +294,24 @@ export async function runScraper(options?: {
             }
           }
 
+          // Enrich body with in-text images (real gallery photos → Unsplash)
+          let finalContent = rewritten.content;
+          try {
+            finalContent = await enrichContentWithImages({
+              content: rewritten.content,
+              originalUrl: raw.originalUrl,
+              heroImage: imageUrl,
+              tags: rewritten.tags,
+            });
+          } catch {
+            /* keep plain content on failure */
+          }
+
           await saveArticle({
             slug,
             title: rewritten.title,
             excerpt: rewritten.excerpt,
-            content: rewritten.content,
+            content: finalContent,
             image: imageUrl || undefined,
             author: "Redakce TM",
             readTime: rewritten.readTime,

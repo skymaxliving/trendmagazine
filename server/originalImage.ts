@@ -78,7 +78,7 @@ export async function getOriginalImage(
   return fetchOgImage(articleUrl);
 }
 
-function isImageUrl(url: string): boolean {
+export function isImageUrl(url: string): boolean {
   if (!/^https?:\/\//i.test(url)) return false;
   const u = url.toLowerCase();
   // Reject video players / embeds (e.g. a video article's og:image may be an
@@ -91,7 +91,7 @@ function isImageUrl(url: string): boolean {
   return true;
 }
 
-function absolutize(url: string, base: string): string {
+export function absolutize(url: string, base: string): string {
   try {
     return new URL(url, base).toString();
   } catch {
@@ -99,7 +99,7 @@ function absolutize(url: string, base: string): string {
   }
 }
 
-function decodeEntities(s: string): string {
+export function decodeEntities(s: string): string {
   return s
     .replace(/&amp;/g, "&")
     .replace(/&lt;/g, "<")

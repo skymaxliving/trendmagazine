@@ -226,6 +226,31 @@ body::before {
   max-width: 65ch;
 }
 
+/* In-body images (magazine style) — break out of the 65ch text column */
+.article-body figure,
+.article-body .article-figure {
+  margin: 2.5rem 0;
+  max-width: 820px;
+  width: 100%;
+}
+
+.article-body figure img,
+.article-body .article-figure img {
+  width: 100%;
+  height: auto;
+  border-radius: 0.5rem;
+  display: block;
+  background: oklch(0.92 0.006 80);
+  box-shadow: 0 1px 3px oklch(0.18 0.02 255 / 0.12);
+}
+
+.article-body figcaption {
+  margin-top: 0.6rem;
+  font-size: 0.85rem;
+  color: oklch(0.5 0.01 255);
+  font-style: italic;
+}
+
 .article-body h2 {
   font-family: var(--font-serif);
   font-size: 1.75rem;

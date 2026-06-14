@@ -92,12 +92,24 @@ function inject(shell: string, headHtml: string, rootHtml: string): string {
   return html;
 }
 
+function imageList(a: ArticleLike): string[] {
+  const imgs: string[] = [];
+  if (a.image) imgs.push(a.image);
+  const re = /<img\b[^>]*\bsrc=["']([^"']+)["']/gi;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(a.content || "")) !== null) {
+    if (m[1] && !imgs.includes(m[1])) imgs.push(m[1]);
+  }
+  return imgs.slice(0, 6);
+}
+
 function articleJsonLd(a: ArticleLike, url: string): string {
+  const imgs = imageList(a);
   const obj: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "NewsArticle",
     headline: clip(a.title, 110),
-    image: a.image ? [a.image] : undefined,
+    image: imgs.length ? imgs : undefined,
     datePublished: iso(a.publishedAt) || iso(a.createdAt),
     dateModified: iso(a.createdAt) || iso(a.publishedAt),
     author: { "@type": "Organization", name: a.author || "Redakce TM" },

@@ -99,3 +99,25 @@ export async function getArticleImage(article: {
   console.warn(`[ImageService] No fallback image for: "${article.title.slice(0, 50)}..."`);
   return null;
 }
+
+/** Fetch up to `count` topical Unsplash photos (for in-body images). */
+export async function searchUnsplashPhotos(query: string, count: number): Promise<string[]> {
+  const apiKey = process.env.UNSPLASH_ACCESS_KEY;
+  if (!apiKey || count < 1) return [];
+  try {
+    const searchUrl = `${UNSPLASH_API_URL}/search/photos?query=${encodeURIComponent(
+      query
+    )}&per_page=${Math.min(count, 5)}&orientation=landscape&content_filter=high`;
+    const response = await fetch(searchUrl, {
+      headers: { Authorization: `Client-ID ${apiKey}`, "Accept-Version": "v1" },
+      signal: AbortSignal.timeout(10000),
+    });
+    if (!response.ok) return [];
+    const data = (await response.json()) as { results?: { urls?: { regular?: string } }[] };
+    return (data.results || [])
+      .map((p) => p.urls?.regular)
+      .filter((u): u is string => !!u);
+  } catch {
+    return [];
+  }
+}
