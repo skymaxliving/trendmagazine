@@ -2,8 +2,11 @@ name: Scrape articles
 
 on:
   schedule:
-    # Twice a day (07:00 and 19:00 Prague ~ 05:00/17:00 UTC)
-    - cron: "0 5,17 * * *"
+    # Every 2 hours. GitHub's scheduled runs are best-effort (often delayed by
+    # hours, sometimes dropped entirely), so we run frequently for redundancy —
+    # a missed run is always covered by the next one within 2h, which keeps the
+    # site fresh in the morning. Runs are cheap: no new items => exits in seconds.
+    - cron: "0 */2 * * *"
   workflow_dispatch:
     inputs:
       maxPerSource:

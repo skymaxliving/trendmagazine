@@ -28,6 +28,7 @@ export default function Home() {
     featuredGrid,
     latestArticles,
     mobileArticles,
+    isLoading,
   } = useHomepageArticles();
 
   const { categories } = useCategories();
@@ -47,7 +48,11 @@ export default function Home() {
       <main className="flex-1 overflow-x-hidden">
         {/* Hero Carousel */}
         <section className="container mt-4 sm:mt-6 mb-4 sm:mb-8 overflow-hidden">
-          <HeroCarousel articles={heroArticles} />
+          {isLoading && heroArticles.length === 0 ? (
+            <div className="relative rounded-lg overflow-hidden aspect-[16/9] lg:aspect-[21/9] bg-muted animate-pulse" />
+          ) : (
+            <HeroCarousel articles={heroArticles} />
+          )}
         </section>
 
         {/* Markets / info bar (desktop) */}

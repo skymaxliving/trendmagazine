@@ -49,10 +49,15 @@ export function useHomepageArticles() {
     { retry: 1, staleTime: 60_000 }
   );
 
-  // If we have DB articles, use them; otherwise fall back to static
+  // While the query is in flight, return NOTHING (loading state) rather than the
+  // stale bundled snapshot. Showing `staticArticles` during loading made the hero
+  // flash an old article before the fresh DB data arrived. Static is only a
+  // last-resort fallback once the query has settled empty (e.g. DB empty / error).
   const articles: Article[] =
     dbArticles && dbArticles.length > 0
       ? dbArticles.map(dbToArticle)
+      : isLoading
+      ? []
       : staticArticles;
 
   // Hero always shows the 5 newest articles (sorted by publishedAt desc from API)
@@ -85,6 +90,8 @@ export function useCategoryArticles(categorySlug: string, limit = 20) {
   const articles: Article[] =
     dbArticles && dbArticles.length > 0
       ? dbArticles.map(dbToArticle)
+      : isLoading
+      ? []
       : getStaticArticlesByCategory(categorySlug);
 
   return { articles, isLoading, error };
@@ -139,7 +146,7 @@ export function useArticle(slug: string) {
 
 /** Hook: Get articles for a specific category section on homepage */
 export function useCategorySectionArticles(categorySlug: string) {
-  const { data: dbArticles } = trpc.articles.byCategory.useQuery(
+  const { data: dbArticles, isLoading } = trpc.articles.byCategory.useQuery(
     { categorySlug, limit: 4, offset: 0 },
     { retry: 1, staleTime: 60_000 }
   );
@@ -147,6 +154,8 @@ export function useCategorySectionArticles(categorySlug: string) {
   const articles: Article[] =
     dbArticles && dbArticles.length > 0
       ? dbArticles.map(dbToArticle)
+      : isLoading
+      ? []
       : getStaticArticlesByCategory(categorySlug);
 
   return articles;
